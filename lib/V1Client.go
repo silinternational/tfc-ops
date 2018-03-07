@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
-	"net/http"
 	"os"
 )
 
@@ -26,6 +25,23 @@ type TFState struct {
 type TFAllStates struct {
 	States []TFState `json:"states"`
 	Meta   TFMeta    `json:"meta"`
+}
+
+type TFVar struct {
+	Key   string `json:"key"`
+	Value string `json:"value"`
+	Hcl   bool   `json:"hcl"`
+}
+
+type TFConfig struct {
+	Version struct {
+		Version  int `json:"version"`
+		Metadata struct {
+			Foo string `json:"foo"`
+		} `json:"metadata"`
+		TfVars    []TFVar           `json:"tf_vars"`
+		Variables map[string]string `json:"variables"`
+	} `json:"version"`
 }
 
 func getJsonFromFile(jsonFile string) TFAllStates {
@@ -123,4 +139,28 @@ func CreatePlanFromV1EnvNames(filePathName string, envNames []string) {
 			os.Exit(1)
 		}
 	}
+}
+
+func GetTFVarsFromV1Config(organization, envName, tfToken string) ([]TFVar, error) {
+
+	url := fmt.Sprintf(
+		"https://atlas.hashicorp.com/api/v1/terraform/configurations/%s/%s/versions/latest",
+		organization,
+		envName,
+	)
+
+	headers := map[string]string{
+		"X-Atlas-Token": tfToken,
+	}
+	resp := CallApi("POST", url, "", headers)
+
+	defer resp.Body.Close()
+
+	var tfConfig TFConfig
+
+	if err := json.NewDecoder(resp.Body).Decode(&tfConfig); err != nil {
+		return nil, err
+	}
+
+	return tfConfig.Version.TfVars, nil
 }

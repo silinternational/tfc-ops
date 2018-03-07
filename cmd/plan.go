@@ -25,12 +25,17 @@ import (
 var planCmd = &cobra.Command{
 	Use:   "plan",
 	Short: "Generate migration plan file",
-	Long: `Generates a plan.csv file with list of environments from legacy organiazation 
+	Long: `Generates a plan.csv file with list of environments from legacy organization
 	for mapping to new organization.`,
+	Args: cobra.RangeArgs(0, 1),
 	Run: func(cmd *cobra.Command, args []string) {
 		fmt.Println("plan called")
-
+		configFile := "plan.csv"
+		if len(args) >= 1 {
+			configFile = args[0]
+		}
 		envList := migrator.GetAllEnvNamesFromV1API(atlasToken)
+		migrator.CreateConfigFromV1EnvNames(configFile, envList)
 		fmt.Println(envList)
 	},
 }

@@ -1,7 +1,6 @@
 package lib
 
 import (
-	"encoding/csv"
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
@@ -104,41 +103,6 @@ func GetAllEnvNamesFromV1API(tfToken string) []string {
 	}
 
 	return names
-}
-
-/*
- * @param filePathName - The path and/or name of the config file.
- * @param envNames - A slice of the names of the V1 environments
- */
-func CreatePlanFromV1EnvNames(filePathName string, envNames []string) {
-
-	file, err := os.Create(filePathName)
-	if err != nil {
-		fmt.Println(err.Error())
-		os.Exit(1)
-	}
-	defer file.Close()
-
-	writer := csv.NewWriter(file)
-	defer writer.Flush()
-
-	line1 := []string{"V1 Env Name", "V2 Workspace Name", "Terraform Version",
-		"VCS Repo Id", "VCS Branch", "Terraform Working Directory"}
-
-	err = writer.Write(line1)
-	if err != nil {
-		fmt.Println(err.Error())
-		os.Exit(1)
-	}
-
-	for _, value := range envNames {
-		newData := []string{value, value, "", "", "", ""}
-		err := writer.Write(newData)
-		if err != nil {
-			fmt.Println(err.Error())
-			os.Exit(1)
-		}
-	}
 }
 
 func GetTFVarsFromV1Config(organization, envName, tfToken string) ([]TFVar, error) {

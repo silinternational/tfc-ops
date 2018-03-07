@@ -23,7 +23,7 @@ import (
 
 // planCmd represents the plan command
 var planCmd = &cobra.Command{
-	Use:   "plan",
+	Use:   "plan [plan_file.csv]",
 	Short: "Generate migration plan file",
 	Long: `Generates a plan.csv file with list of environments from legacy organization
 	for mapping to new organization.`,

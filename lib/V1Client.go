@@ -66,22 +66,7 @@ func GetAllEnvNamesFromV1API(tfToken string) []string {
 
 	for page := 1; ; page++ {
 		url := fmt.Sprintf("%s%d", baseURL, page)
-
-		req, err := http.NewRequest("GET", url, nil)
-		if err != nil {
-			fmt.Println(err.Error())
-			os.Exit(1)
-		}
-
-		req.Header.Set("X-Atlas-Token", tfToken)
-
-		client := &http.Client{}
-
-		resp, err := client.Do(req)
-		if err != nil {
-			fmt.Println(err.Error())
-			os.Exit(1)
-		}
+		resp := CallApi("GET", url, "", map[string]string{"X-Atlas-Token": tfToken})
 
 		defer resp.Body.Close()
 
@@ -109,7 +94,7 @@ func GetAllEnvNamesFromV1API(tfToken string) []string {
  * @param filePathName - The path and/or name of the config file.
  * @param envNames - A slice of the names of the V1 environments
  */
-func CreateConfigFromV1EnvNames(filePathName string, envNames []string) {
+func CreatePlanFromV1EnvNames(filePathName string, envNames []string) {
 
 	file, err := os.Create(filePathName)
 	if err != nil {

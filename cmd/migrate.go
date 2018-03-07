@@ -17,16 +17,26 @@ package cmd
 import (
 	"fmt"
 
+	migrator "github.com/silinternational/terraform-enterprise-migrator/lib"
+
 	"github.com/spf13/cobra"
 )
 
 // migrateCmd represents the migrate command
 var migrateCmd = &cobra.Command{
-	Use:   "migrate",
+	Use:   "migrate <v1 org name> <v2 org name> [<plan csv file>]",
 	Short: "Perform migration plan",
 	Long:  `Processes plan.csv to validate migration plan and peform the work`,
+	Args:  cobra.RangeArgs(2, 3),
 	Run: func(cmd *cobra.Command, args []string) {
-		runMigration()
+		v1OrgName := args[0]
+		v2OrgName := args[1]
+
+		planFile := "plan.csv"
+		if len(args) >= 3 {
+			planFile = args[2]
+		}
+		runMigration(planFile, v1OrgName, v2OrgName)
 	},
 }
 
@@ -44,6 +54,14 @@ func init() {
 	// migrateCmd.Flags().BoolP("toggle", "t", false, "Help message for toggle")
 }
 
-func runMigration() {
-	fmt.Println("migrate called")
+func runMigration(planFile, v1OrgName, v2OrgName string) {
+	fmt.Println("migrate called using config file: " + planFile)
+	fmt.Println("        V1 Org Name: " + v1OrgName)
+	fmt.Println("        V2 org Name: " + v2OrgName)
+	fmt.Println("        ATLAS Token: " + atlasToken)
+	err := migrator.CreateAndPopulateAllV2Workspaces(planFile, v1OrgName, v2OrgName, atlasToken, vcsToken)
+	if err != nil {
+		fmt.Println(err.Error())
+	}
+
 }

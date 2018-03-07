@@ -116,9 +116,11 @@ func GetTFVarsFromV1Config(organization, envName, tfToken string) ([]TFVar, erro
 	headers := map[string]string{
 		"X-Atlas-Token": tfToken,
 	}
-	resp := CallApi("POST", url, "", headers)
+	resp := CallApi("GET", url, "", headers)
 
 	defer resp.Body.Close()
+	// bodyBytes, _ := ioutil.ReadAll(resp.Body)
+	// fmt.Println(string(bodyBytes))
 
 	var tfConfig TFConfig
 

@@ -35,7 +35,7 @@ var planCmd = &cobra.Command{
 			configFile = args[0]
 		}
 		envList := migrator.GetAllEnvNamesFromV1API(atlasToken)
-		migrator.CreateConfigFromV1EnvNames(configFile, envList)
+		migrator.CreatePlanFromV1EnvNames(configFile, envList)
 		fmt.Println(envList)
 	},
 }

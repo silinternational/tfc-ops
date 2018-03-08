@@ -16,7 +16,7 @@ type MigrationPlan struct {
 	Directory        string
 }
 
-func (p *MigrationPlan) Array() []string {
+func (p *MigrationPlan) AsArray() []string {
 	return []string{
 		p.LegacyName,
 		p.NewName,
@@ -27,8 +27,8 @@ func (p *MigrationPlan) Array() []string {
 	}
 }
 
-func (f *MigrationPlan) getColNames() []string {
-	val := reflect.ValueOf(f).Elem()
+func (p *MigrationPlan) getColNames() []string {
+	val := reflect.ValueOf(p).Elem()
 	cols := []string{}
 
 	for i := 0; i < val.NumField(); i++ {
@@ -65,7 +65,7 @@ func CreatePlanFile(filePathName string, plans []MigrationPlan) {
 	}
 
 	for _, plan := range plans {
-		newData := plan.Array()
+		newData := plan.AsArray()
 		err := writer.Write(newData)
 		if err != nil {
 			fmt.Println(err.Error())

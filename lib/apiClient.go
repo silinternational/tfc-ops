@@ -34,6 +34,7 @@ func CallApi(method, url, postData string, headers map[string]string) *http.Resp
 		os.Exit(1)
 	} else if resp.StatusCode >= 300 {
 		fmt.Println(fmt.Sprintf("API returned an error. Code: %v, Status: %s", resp.StatusCode, resp.Status))
+		os.Exit(1)
 	}
 
 	return resp

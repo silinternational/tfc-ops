@@ -79,12 +79,8 @@ func GetBasePlansFromEnvNames(envNames []string) []MigrationPlan {
 	basePlans := []MigrationPlan{}
 	for _, env := range envNames {
 		newPlan := MigrationPlan{
-			LegacyName:       env,
-			NewName:          env,
-			TerraformVersion: "",
-			RepoID:           "",
-			Branch:           "",
-			Directory:        "",
+			LegacyName: env,
+			NewName:    env,
 		}
 		basePlans = append(basePlans, newPlan)
 	}

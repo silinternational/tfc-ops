@@ -29,7 +29,7 @@ var vcsToken string
 
 // rootCmd represents the base command when called without any subcommands
 var rootCmd = &cobra.Command{
-	Use:   "terraform-enterprise-migrator",
+	Use:   "tfe-migrate",
 	Short: "Migration script for moving environments from Terraform Enterprise (Legacy) to Terraform Enterprise",
 	Long: `Migration is a two step process. First run plan, modify the generated file as needed, 
 then run migrate to process the plan file`,

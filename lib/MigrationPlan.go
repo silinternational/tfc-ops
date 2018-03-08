@@ -8,7 +8,9 @@ import (
 )
 
 type MigrationPlan struct {
+	LegacyOrg        string
 	LegacyName       string
+	NewOrg           string
 	NewName          string
 	TerraformVersion string
 	RepoID           string
@@ -18,7 +20,9 @@ type MigrationPlan struct {
 
 func (p *MigrationPlan) AsArray() []string {
 	return []string{
+		p.LegacyOrg,
 		p.LegacyName,
+		p.NewOrg,
 		p.NewName,
 		p.TerraformVersion,
 		p.RepoID,
@@ -75,11 +79,13 @@ func CreatePlanFile(filePathName string, plans []MigrationPlan) {
 
 }
 
-func GetBasePlansFromEnvNames(envNames []string) []MigrationPlan {
+func GetBasePlansFromEnvNames(envNames []string, legacyOrg, newOrg string) []MigrationPlan {
 	basePlans := []MigrationPlan{}
 	for _, env := range envNames {
 		newPlan := MigrationPlan{
+			LegacyOrg:  legacyOrg,
 			LegacyName: env,
+			NewOrg:     newOrg,
 			NewName:    env,
 		}
 		basePlans = append(basePlans, newPlan)

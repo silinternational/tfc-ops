@@ -52,7 +52,7 @@ func GetAllEnvNamesFromV1API(tfToken string) []string {
 
 	for page := 1; ; page++ {
 		url := fmt.Sprintf("%s%d", baseURL, page)
-		resp := CallApi("GET", url, "", map[string]string{"X-Atlas-Token": tfToken})
+		resp := CallAPI("GET", url, "", map[string]string{"X-Atlas-Token": tfToken})
 
 		defer resp.Body.Close()
 
@@ -89,7 +89,7 @@ func GetTFVarsFromV1Config(organization, envName, tfToken string) ([]TFVar, erro
 	headers := map[string]string{
 		"X-Atlas-Token": tfToken,
 	}
-	resp := CallApi("GET", url, "", headers)
+	resp := CallAPI("GET", url, "", headers)
 
 	defer resp.Body.Close()
 	// bodyBytes, _ := ioutil.ReadAll(resp.Body)

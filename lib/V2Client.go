@@ -70,7 +70,7 @@ func CreateV2Variable(organization, workspaceName, tfToken string, tfVar TFVar) 
 		"Authorization": "Bearer " + tfToken,
 		"Content-Type":  "application/vnd.api+json",
 	}
-	resp := CallApi("POST", url, postData, headers)
+	resp := CallAPI("POST", url, postData, headers)
 
 	defer resp.Body.Close()
 	// bodyBytes, _ := ioutil.ReadAll(resp.Body)
@@ -130,7 +130,7 @@ func CreateV2Workspace(
 		"Authorization": "Bearer " + tfToken,
 		"Content-Type":  "application/vnd.api+json",
 	}
-	resp := CallApi("POST", url, postData, headers)
+	resp := CallAPI("POST", url, postData, headers)
 
 	defer resp.Body.Close()
 	// bodyBytes, _ := ioutil.ReadAll(resp.Body)

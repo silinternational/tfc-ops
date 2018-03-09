@@ -159,10 +159,7 @@ func CreateAndPopulateV2Workspace(
 	return nil
 }
 
-func CreateAndPopulateAllV2Workspaces(
-	configFile, v1OrgName, v2OrgName string,
-	tfToken, vcsTokenID string,
-) error {
+func CreateAndPopulateAllV2Workspaces(configFile, tfToken, vcsTokenID string) error {
 	// Get config contents
 	csvFile, err := os.Open(configFile)
 	if err != nil {
@@ -184,13 +181,16 @@ func CreateAndPopulateAllV2Workspaces(
 		} else if err != nil {
 			return err
 		}
-		v1WorkspaceName := line[0]
+		v1OrgName := line[0]
+		v1WorkspaceName := line[1]
+		v2OrgName := line[2]
+
 		v2Workspace := V2Workspace{
-			Name:         line[1],
-			TFVersion:    line[2],
-			VCSRepoID:    line[3],
-			VCSBranch:    line[4],
-			TFWorkingDir: line[5],
+			Name:         line[3],
+			TFVersion:    line[4],
+			VCSRepoID:    line[5],
+			VCSBranch:    line[6],
+			TFWorkingDir: line[7],
 		}
 
 		err = CreateAndPopulateV2Workspace(

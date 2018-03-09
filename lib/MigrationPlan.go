@@ -18,6 +18,7 @@ type MigrationPlan struct {
 	Directory        string
 }
 
+// AsArray returns the values of the MigrationPlan attributes
 func (p *MigrationPlan) AsArray() []string {
 	return []string{
 		p.LegacyOrg,
@@ -43,11 +44,9 @@ func (p *MigrationPlan) getColNames() []string {
 	return cols
 }
 
-/*
- * CreatePlanFile generates a CSV file with plan details
- * @param filePathName - The path and/or name of the config file.
- * @param envNames - A slice of the names of the V1 environments
- */
+// CreatePlanFile generates a CSV file with plan details
+// @param filePathName - The path and/or name of the config file.
+// @param envNames - A slice of the names of the V1 environments
 func CreatePlanFile(filePathName string, plans []MigrationPlan) {
 	file, err := os.Create(filePathName)
 	if err != nil {
@@ -76,9 +75,10 @@ func CreatePlanFile(filePathName string, plans []MigrationPlan) {
 			os.Exit(1)
 		}
 	}
-
 }
 
+// GetBasePlansFromEnvNames creates the initial MigrationPlan structs to
+// be used to create a plan.csv file
 func GetBasePlansFromEnvNames(envNames []string, legacyOrg, newOrg string) []MigrationPlan {
 	basePlans := []MigrationPlan{}
 	for _, env := range envNames {

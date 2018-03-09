@@ -24,19 +24,12 @@ import (
 
 // migrateCmd represents the migrate command
 var migrateCmd = &cobra.Command{
-	Use:   "migrate <v1 org name> <v2 org name> [<plan csv file>]",
+	Use:   "migrate",
 	Short: "Perform migration plan",
 	Long:  `Processes plan.csv to validate migration plan and peform the work`,
-	Args:  cobra.RangeArgs(2, 3),
+	Args:  cobra.ExactArgs(0),
 	Run: func(cmd *cobra.Command, args []string) {
-		v1OrgName := args[0]
-		v2OrgName := args[1]
-
-		planFile := "plan.csv"
-		if len(args) >= 3 {
-			planFile = args[2]
-		}
-		runMigration(planFile, v1OrgName, v2OrgName)
+		runMigration(planFile)
 	},
 }
 
@@ -47,19 +40,16 @@ func init() {
 
 	// Cobra supports Persistent Flags which will work for this command
 	// and all subcommands, e.g.:
-	// migrateCmd.PersistentFlags().String("foo", "", "A help for foo")
+	// planCmd.PersistentFlags().String("foo", "", "A help for foo")
 
 	// Cobra supports local flags which will only run when this command
 	// is called directly, e.g.:
-	// migrateCmd.Flags().BoolP("toggle", "t", false, "Help message for toggle")
+	migrateCmd.Flags().StringVarP(&planFile, "file", "f", "plan.csv", "optional - Name of migration plan CSV file")
 }
 
-func runMigration(planFile, v1OrgName, v2OrgName string) {
+func runMigration(planFile string) {
 	fmt.Println("migrate called using config file: " + planFile)
-	fmt.Println("        V1 Org Name: " + v1OrgName)
-	fmt.Println("        V2 org Name: " + v2OrgName)
-	fmt.Println("        ATLAS Token: " + atlasToken)
-	err := migrator.CreateAndPopulateAllV2Workspaces(planFile, v1OrgName, v2OrgName, atlasToken, vcsToken)
+	err := migrator.CreateAndPopulateAllV2Workspaces(planFile, atlasToken, vcsToken)
 	if err != nil {
 		fmt.Println(err.Error())
 	}

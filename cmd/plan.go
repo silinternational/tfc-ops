@@ -28,11 +28,11 @@ var planFile string
 
 // planCmd represents the plan command
 var planCmd = &cobra.Command{
-	Use:   "plan -l legacyOrg -n newOrg",
+	Use:   "plan",
 	Short: "Generate migration plan file",
 	Long: `Generates a plan.csv file with list of environments from legacy organization
 for mapping to new organization.`,
-	Args: cobra.RangeArgs(0, 1),
+	Args: cobra.ExactArgs(0),
 	Run: func(cmd *cobra.Command, args []string) {
 		if legacyOrg == "" {
 			fmt.Println("Error: The 'legacy' flag is required")

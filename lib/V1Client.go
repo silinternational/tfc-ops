@@ -3,7 +3,6 @@ package lib
 import (
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
 	"os"
 )
 
@@ -32,6 +31,7 @@ type TFVar struct {
 	Hcl   bool   `json:"hcl"`
 }
 
+// TFConfig matches the json return value of the v1 terraform configurations api
 type TFConfig struct {
 	Version struct {
 		Version  int `json:"version"`
@@ -43,38 +43,9 @@ type TFConfig struct {
 	} `json:"version"`
 }
 
-func getJsonFromFile(jsonFile string) TFAllStates {
-	raw, err := ioutil.ReadFile(jsonFile)
-	if err != nil {
-		fmt.Println(err.Error())
-		os.Exit(1)
-	}
-
-	var contents TFAllStates
-	json.Unmarshal(raw, &contents)
-	return contents
-}
-
-/*
- * @param jsonFile The path and/or file name of a json file the contents
- *        of which match what is returned from the terraform api
- * @return a slice of strings -the environment names
- */
-func GetAllEnvNamesFromJson(jsonFile string) []string {
-	envNames := []string{}
-	allStates := getJsonFromFile(jsonFile)
-
-	for _, nextState := range allStates.States {
-		envNames = append(envNames, nextState.Environment.Name)
-	}
-
-	return envNames
-}
-
-/*
- * @param tfToken The user's Terraform Enterprise Token
- * @return a slice of strings - the environment names from the v1 api
- */
+// GetAllEnvNamesFromV1API calls the v1 terraform state api.
+// @param tfToken The user's Terraform Enterprise Token
+// @return a slice of strings - the environment names from the v1 api
 func GetAllEnvNamesFromV1API(tfToken string) []string {
 	baseURL := "https://atlas.hashicorp.com/api/v1/terraform/state?page="
 	names := []string{}
@@ -105,6 +76,8 @@ func GetAllEnvNamesFromV1API(tfToken string) []string {
 	return names
 }
 
+// GetTFVarsFromV1Config calls the v1 terraform configurations api and
+// returns a list of Terraform variables for a given environment
 func GetTFVarsFromV1Config(organization, envName, tfToken string) ([]TFVar, error) {
 
 	url := fmt.Sprintf(

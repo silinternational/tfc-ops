@@ -6,25 +6,30 @@ import (
 	"os"
 )
 
+// TFMeta matches the meta element
 type TFMeta struct {
 	Total int `json:"total"`
 }
 
+// TFEnv matches the contents of the environment element
 type TFEnv struct {
 	Username string `json:"username"`
 	Name     string `json:"name"`
 }
 
+// TFState matches one entry in the states list
 type TFState struct {
 	UpdatedAt   string `json:"updated_at"`
 	Environment TFEnv  `json:"environment"`
 }
 
+// TFAllStates matches the return value of a call to the v1 terraform state api
 type TFAllStates struct {
 	States []TFState `json:"states"`
 	Meta   TFMeta    `json:"meta"`
 }
 
+// TFVar matches the attributes of a terraform environment/workspace's variable
 type TFVar struct {
 	Key   string `json:"key"`
 	Value string `json:"value"`

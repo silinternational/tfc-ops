@@ -7,6 +7,7 @@ import (
 	"reflect"
 )
 
+// MigrationPlan represents one row of the plan.csv file's contents
 type MigrationPlan struct {
 	LegacyOrg        string
 	LegacyName       string

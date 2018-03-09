@@ -9,6 +9,7 @@ import (
 	"strings"
 )
 
+// V2Workspace holds the information needed to create a v2 terraform workspace
 type V2Workspace struct {
 	Name         string
 	TFVersion    string
@@ -17,10 +18,8 @@ type V2Workspace struct {
 	TFWorkingDir string
 }
 
-/*
- * @param tfVar - Changes the struct in place by escaping
- *  the double quotes and line endings in the Value attribute
- */
+// ConvertHCLVariable changes a TFVar struct in place by escaping
+//  the double quotes and line endings in the Value attribute
 func ConvertHCLVariable(tfVar *TFVar) {
 	if !tfVar.Hcl {
 		return

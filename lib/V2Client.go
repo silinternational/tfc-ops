@@ -30,9 +30,8 @@ func ConvertHCLVariable(tfVar *TFVar) {
 	tfVar.Value = strings.Replace(tfVar.Value, "\n", "\\n", -1)
 }
 
-/*
- * @return string - The json needed for the data payload for the api call
- */
+// GetCreateV2VariablePayload returns the json needed to make a Post to the
+// v2 terraform vars api
 func GetCreateV2VariablePayload(organization, workspaceName string, tfVar TFVar) string {
 	return fmt.Sprintf(`
 {
@@ -58,6 +57,8 @@ func GetCreateV2VariablePayload(organization, workspaceName string, tfVar TFVar)
 `, tfVar.Key, tfVar.Value, tfVar.Hcl, organization, workspaceName)
 }
 
+// CreateV2Variable makes a v2 terraform vars api post to create a variable
+// for a given organization and v2 workspace
 func CreateV2Variable(organization, workspaceName, tfToken string, tfVar TFVar) {
 	url := "https://app.terraform.io/api/v2/vars"
 
@@ -77,15 +78,16 @@ func CreateV2Variable(organization, workspaceName, tfToken string, tfVar TFVar) 
 	return
 }
 
+// CreateAllV2Variables makes several v2 terraform vars api posts to create
+// variables for a given organization and v2 workspace
 func CreateAllV2Variables(organization, workspaceName, tfToken string, tfVars []TFVar) {
 	for _, nextVar := range tfVars {
 		CreateV2Variable(organization, workspaceName, tfToken, nextVar)
 	}
 }
 
-/*
- * @return string - The json needed for the data payload for the api call
- */
+// GetCreateV2WorkspacePayload returns the json needed to make a Post to the
+// v2 terraform workspaces api
 func GetCreateV2WorkspacePayload(
 	name, tfVersion, workingDir string,
 	vcsID, vcsTokenID, vcsBranch string,
@@ -111,6 +113,8 @@ func GetCreateV2WorkspacePayload(
   `, name, tfVersion, workingDir, vcsID, vcsTokenID, vcsBranch)
 }
 
+// CreateV2Workspace makes a v2 terraform workspaces api Post to create a
+// workspace for a given organization, including setting up its vcs repo integration
 func CreateV2Workspace(
 	organization, name, tfToken, tfVersion, workingDir string,
 	vcsID, vcsTokenID, vcsBranch string,
@@ -133,6 +137,11 @@ func CreateV2Workspace(
 	// fmt.Println(string(bodyBytes))
 }
 
+// CreateAndPopulateV2Workspace makes several api calls to get the variable values
+// for a v1 terraform environment and create a corresponding v2 terraform
+// workspace along with those same variables.
+// Note that the values for sensitive v1 variables will need to be corrected
+// in the v2 workspace.
 func CreateAndPopulateV2Workspace(
 	v2Workspace V2Workspace,
 	v1WorkspaceName, v1OrgName, v2OrgName, tfToken, vcsTokenID string,
@@ -159,6 +168,18 @@ func CreateAndPopulateV2Workspace(
 	return nil
 }
 
+// CreateAndPopulateAllV2Workspaces makes several api calls to retrieve variables
+// from v1 environments and create and populate corresponding v2 workspaces.
+//   It relies on a csv file with the following columns (the first row will be ignored).
+//   Note: these columns are defined by the MigrationPlan struct
+// - the name of the organization in Legacy
+// - the name of the legacy environment
+// - the of the organization in the new Enterprise
+// - the name of the new workspace
+// - the new terraform version (e.g. ""0.11.3")
+// - the id of the version control repo (e.g. "myorg/myproject")
+// - the version control branch that the new workspace should be linked to
+// - the directory that holds the terraform configuration files in the vcs repo
 func CreateAndPopulateAllV2Workspaces(configFile, tfToken, vcsTokenID string) error {
 	// Get config contents
 	csvFile, err := os.Open(configFile)

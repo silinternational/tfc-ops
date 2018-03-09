@@ -87,10 +87,7 @@ func CreateAllV2Variables(organization, workspaceName, tfToken string, tfVars []
 
 // GetCreateV2WorkspacePayload returns the json needed to make a Post to the
 // v2 terraform workspaces api
-func GetCreateV2WorkspacePayload(
-	name, tfVersion, workingDir string,
-	vcsID, vcsTokenID, vcsBranch string,
-) string {
+func GetCreateV2WorkspacePayload(mp MigrationPlan, vcsTokenID string) string {
 	return fmt.Sprintf(`
 {
   "data": {
@@ -109,21 +106,21 @@ func GetCreateV2WorkspacePayload(
   }
 
 }
-  `, name, tfVersion, workingDir, vcsID, vcsTokenID, vcsBranch)
+  `, mp.NewName, mp.TerraformVersion, mp.Directory, mp.RepoID, vcsTokenID, mp.Branch)
 }
 
 // CreateV2Workspace makes a v2 terraform workspaces api Post to create a
 // workspace for a given organization, including setting up its vcs repo integration
 func CreateV2Workspace(
-	organization, name, tfToken, tfVersion, workingDir string,
-	vcsID, vcsTokenID, vcsBranch string,
+	mp MigrationPlan,
+	tfToken, vcsTokenID string,
 ) {
 	url := fmt.Sprintf(
 		"https://app.terraform.io/api/v2/organizations/%s/workspaces",
-		organization,
+		mp.NewOrg,
 	)
 
-	postData := GetCreateV2WorkspacePayload(name, tfVersion, workingDir, vcsID, vcsTokenID, vcsBranch)
+	postData := GetCreateV2WorkspacePayload(mp, vcsTokenID)
 
 	headers := map[string]string{
 		"Authorization": "Bearer " + tfToken,
@@ -142,27 +139,18 @@ func CreateV2Workspace(
 // Note that the values for sensitive v1 variables will need to be corrected
 // in the v2 workspace.
 func CreateAndPopulateV2Workspace(
-	v2Workspace V2Workspace,
-	v1WorkspaceName, v1OrgName, v2OrgName, tfToken, vcsTokenID string,
+	mp MigrationPlan,
+	tfToken, vcsTokenID string,
 ) error {
 
-	v1Vars, err := GetTFVarsFromV1Config(v1OrgName, v1WorkspaceName, tfToken)
+	v1Vars, err := GetTFVarsFromV1Config(mp.LegacyOrg, mp.LegacyName, tfToken)
 	if err != nil {
 		return err
 	}
 
-	CreateV2Workspace(
-		v2OrgName,
-		v2Workspace.Name,
-		tfToken,
-		v2Workspace.TFVersion,
-		v2Workspace.TFWorkingDir,
-		v2Workspace.VCSRepoID,
-		vcsTokenID,
-		v2Workspace.VCSBranch,
-	)
+	CreateV2Workspace(mp, tfToken, vcsTokenID)
 
-	CreateAllV2Variables(v2OrgName, v2Workspace.Name, tfToken, v1Vars)
+	CreateAllV2Variables(mp.NewOrg, mp.NewName, tfToken, v1Vars)
 
 	return nil
 }
@@ -191,36 +179,26 @@ func CreateAndPopulateAllV2Workspaces(configFile, tfToken, vcsTokenID string) er
 	// Throw away the first line with its column headers
 	_, err = reader.Read()
 	if err != nil {
-		return err
+		newErr := fmt.Errorf("Error reading first row of the plan ...\n %s", err.Error())
+		return newErr
 	}
 
-	for {
+	for rowNum := 2; ; rowNum++ {
 		line, err := reader.Read()
 		if err == io.EOF {
 			break
 		} else if err != nil {
-			return err
-		}
-		v1OrgName := line[0]
-		v1WorkspaceName := line[1]
-		v2OrgName := line[2]
-
-		v2Workspace := V2Workspace{
-			Name:         line[3],
-			TFVersion:    line[4],
-			VCSRepoID:    line[5],
-			VCSBranch:    line[6],
-			TFWorkingDir: line[7],
+			newErr := fmt.Errorf("Error reading row %d of the plan ...\n %s", rowNum, err.Error())
+			return newErr
 		}
 
-		err = CreateAndPopulateV2Workspace(
-			v2Workspace,
-			v1WorkspaceName,
-			v1OrgName,
-			v2OrgName,
-			tfToken,
-			vcsTokenID,
-		)
+		migrationPlan, err := NewMigrationPlan(line)
+		if err != nil {
+			fmt.Printf("Skipping row %d because of an error ...\n %s\n", rowNum, err.Error())
+			continue
+		}
+
+		err = CreateAndPopulateV2Workspace(migrationPlan, tfToken, vcsTokenID)
 		if err != nil {
 			return err
 		}

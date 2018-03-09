@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"reflect"
+	"strings"
 )
 
 // MigrationPlan represents one row of the plan.csv file's contents
@@ -43,6 +44,52 @@ func (p *MigrationPlan) getColNames() []string {
 	}
 
 	return cols
+}
+
+// NewMigrationPlan creates a new MigrationPlan from a csv row
+func NewMigrationPlan(values []string) (MigrationPlan, error) {
+	var mp MigrationPlan
+	columnCount := 8
+	if len(values) < columnCount {
+		return mp, fmt.Errorf("Too few values to create MigrationPlan. Need: %d, but only got %d",
+			columnCount, len(values),
+		)
+	}
+
+	for index, nextValue := range values {
+		if nextValue == "" {
+			return mp, fmt.Errorf("Empty string not allowed in column %d", index+1)
+		}
+	}
+
+	version := values[4]
+	versionParts := strings.Split(version, ".")
+
+	if len(versionParts) != 3 {
+		return mp, fmt.Errorf("The version value should have three sets of digits separated by dots. Got %s",
+			version,
+		)
+	}
+
+	repoID := values[5]
+	repoIDParts := strings.Split(repoID, `/`)
+
+	if len(repoIDParts) < 2 {
+		return mp, fmt.Errorf("The RepoID value should include a slash. Got %s", repoID)
+	}
+
+	mp = MigrationPlan{
+		LegacyOrg:        values[0],
+		LegacyName:       values[1],
+		NewOrg:           values[2],
+		NewName:          values[3],
+		TerraformVersion: version,
+		RepoID:           repoID,
+		Branch:           values[6],
+		Directory:        values[7],
+	}
+
+	return mp, nil
 }
 
 // CreatePlanFile generates a CSV file with plan details

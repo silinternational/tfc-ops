@@ -8,6 +8,7 @@ import (
 	"os"
 	"os/exec"
 	"strings"
+	"bytes"
 )
 
 // V2Workspace holds the information needed to create a v2 terraform workspace
@@ -156,38 +157,74 @@ func CreateAndPopulateV2Workspace(
 	return nil
 }
 
+
 // RunTFInit ...
 //  - removes old tf state files
 //  - runs tf init with old versions
 //  - runs tf init with new version
 func RunTFInit(mp MigrationPlan, tfToken string) error {
-	var command string
+	var tfInit string
 	var err error
 	var osCmd *exec.Cmd
+	var stderr bytes.Buffer
 
-	// Remove previous state file
-	osCmd = exec.Command("rm -rf .terraform/terraform.tfstate")
+	stateFile := ".terraform/terraform.tfstate"
+
+	// Remove previous state file, if it exists
+	_, err = os.Stat(stateFile)
+	if err == nil {
+		err = os.Remove(stateFile)
+		if err != nil {
+			return err
+		}
+	}
+
+	println("About to run terraform init for Legacy: ")
+
+	tfInit = fmt.Sprintf(`-backend-config=name=%s/%s`, mp.LegacyOrg, mp.LegacyName)
+
+	osCmd = exec.Command("terraform", "init", tfInit)
+
+	osCmd.Stderr = &stderr
+
 	err = osCmd.Run()
 	if err != nil {
+		println("Error with Legacy: " + tfInit)
+		fmt.Println(fmt.Sprint(err) + ": " + stderr.String())
 		return err
 	}
 
-	// Run tf init with old version
-	command = fmt.Sprintf(`terraform init -backend-config="name=%s/%s"`, mp.LegacyOrg, mp.LegacyName)
-	osCmd = exec.Command(command)
-	err = osCmd.Run()
-	if err != nil {
-		return err
-	}
+	println("About to run terraform init for New Version")
 
 	// Run tf init with new version
-	command = fmt.Sprintf(`terraform init -backend-config="name=%s/%s"`, mp.NewOrg, mp.NewName)
-	osCmd = exec.Command(command)
-	err = osCmd.Run()
+	tfInit = fmt.Sprintf(`-backend-config=name=%s/%s`, mp.NewOrg, mp.NewName)
+	osCmd = exec.Command("terraform", "init", tfInit)
+	osCmd.Stderr = &stderr
+
+	// Needed to run the command interactively, in order to allow for an automated reply
+	cmdStdin, err := osCmd.StdinPipe()
+	if err != nil {
+		println("Error with StdinPipe: " + tfInit)
+		return err
+	}
+
+	err = osCmd.Start()
 	if err != nil {
 		return err
 	}
 
+	defer cmdStdin.Close()
+	io.Copy(cmdStdin, bytes.NewBufferString("yes\n"))
+
+	//  Answer "yes" to the question about creating the new state
+	err = osCmd.Wait()
+	if err != nil {
+		println("Error waiting for new tf init: " + tfInit)
+		fmt.Println(fmt.Sprint(err) + ": " + stderr.String())
+		return err
+	}
+
+	println("Completed terraform init with no errors.")
 	return nil
 }
 

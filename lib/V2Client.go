@@ -6,7 +6,9 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"os/exec"
 	"strings"
+	"bytes"
 )
 
 // V2Workspace holds the information needed to create a v2 terraform workspace
@@ -155,6 +157,77 @@ func CreateAndPopulateV2Workspace(
 	return nil
 }
 
+
+// RunTFInit ...
+//  - removes old tf state files
+//  - runs tf init with old versions
+//  - runs tf init with new version
+func RunTFInit(mp MigrationPlan, tfToken string) error {
+	var tfInit string
+	var err error
+	var osCmd *exec.Cmd
+	var stderr bytes.Buffer
+
+	stateFile := ".terraform/terraform.tfstate"
+
+	// Remove previous state file, if it exists
+	_, err = os.Stat(stateFile)
+	if err == nil {
+		err = os.Remove(stateFile)
+		if err != nil {
+			return err
+		}
+	}
+
+	println("About to run terraform init for Legacy: ")
+
+	tfInit = fmt.Sprintf(`-backend-config=name=%s/%s`, mp.LegacyOrg, mp.LegacyName)
+
+	osCmd = exec.Command("terraform", "init", tfInit)
+
+	osCmd.Stderr = &stderr
+
+	err = osCmd.Run()
+	if err != nil {
+		println("Error with Legacy: " + tfInit)
+		fmt.Println(fmt.Sprint(err) + ": " + stderr.String())
+		return err
+	}
+
+	println("About to run terraform init for New Version")
+
+	// Run tf init with new version
+	tfInit = fmt.Sprintf(`-backend-config=name=%s/%s`, mp.NewOrg, mp.NewName)
+	osCmd = exec.Command("terraform", "init", tfInit)
+	osCmd.Stderr = &stderr
+
+	// Needed to run the command interactively, in order to allow for an automated reply
+	cmdStdin, err := osCmd.StdinPipe()
+	if err != nil {
+		println("Error with StdinPipe: " + tfInit)
+		return err
+	}
+
+	err = osCmd.Start()
+	if err != nil {
+		return err
+	}
+
+	defer cmdStdin.Close()
+	io.Copy(cmdStdin, bytes.NewBufferString("yes\n"))
+
+	//  Answer "yes" to the question about creating the new state
+	err = osCmd.Wait()
+	if err != nil {
+		println("Error waiting for new tf init: " + tfInit)
+		fmt.Println(fmt.Sprint(err) + ": " + stderr.String())
+		return err
+	}
+
+	println("Completed terraform init with no errors.")
+	return nil
+}
+
 // CreateAndPopulateAllV2Workspaces makes several api calls to retrieve variables
 // from v1 environments and create and populate corresponding v2 workspaces.
 //   It relies on a csv file with the following columns (the first row will be ignored).
@@ -167,6 +240,9 @@ func CreateAndPopulateV2Workspace(
 // - the id of the version control repo (e.g. "myorg/myproject")
 // - the version control branch that the new workspace should be linked to
 // - the directory that holds the terraform configuration files in the vcs repo
+//
+// It also runs `terraform init` with the legacy information and then again with
+// the new version.
 func CreateAndPopulateAllV2Workspaces(configFile, tfToken, vcsTokenID string) error {
 	// Get config contents
 	csvFile, err := os.Open(configFile)
@@ -203,6 +279,11 @@ func CreateAndPopulateAllV2Workspaces(configFile, tfToken, vcsTokenID string) er
 			return err
 		}
 
+		err = RunTFInit(migrationPlan, tfToken)
+		if err != nil {
+			return err
+		}
 	}
+
 	return nil
 }

@@ -278,6 +278,25 @@ func CreateAndPopulateAllV2Workspaces(configFile, tfToken, vcsTokenID string) (m
 			continue
 		}
 
+
+		fmt.Printf(
+			"About to create version 2 workspace for %s/%s\n",
+			migrationPlan.NewOrg,
+			migrationPlan.NewName,
+		)
+		fmt.Print("Would you like to S=skip or A=abort? (Hit any other key to continue.) ... ")
+		var userResponse string
+		fmt.Scanln(&userResponse)
+
+		if userResponse == "a" || userResponse == "A" {
+			err = fmt.Errorf(" NOTICE: User Aborted Creation of New Workspaces")
+			return completed, err
+		}
+
+		if userResponse == "s" || userResponse == "S" {
+			continue
+		}
+
 		sensitiveVars, err = CreateAndPopulateV2Workspace(migrationPlan, tfToken, vcsTokenID)
 		if err != nil {
 			return completed, err

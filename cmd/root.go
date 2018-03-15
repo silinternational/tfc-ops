@@ -59,17 +59,25 @@ func init() {
 	// when this action is called directly.
 	//rootCmd.Flags().BoolP("toggle", "t", false, "Help message for toggle")
 
+	foundError := false
+
 	// Get Tokens from env vars
 	atlasToken = os.Getenv("ATLAS_TOKEN")
 	if atlasToken == "" {
-		fmt.Println("Warning: Environment variable for ATLAST_TOKEN is required to execute plan and migration")
+		fmt.Println("Error: Environment variable for ATLAST_TOKEN is required to execute plan and migration")
 		fmt.Println("")
+		foundError = true
 	}
 
 	vcsToken = os.Getenv("ATLAS_VCS_TOKEN")
 	if vcsToken == "" {
-		fmt.Println("Warning: Environment variable for ATLAST_VCS_TOKEN is required to execute plan and migration")
+		fmt.Println("Error: Environment variable for ATLAST_VCS_TOKEN is required to execute plan and migration")
 		fmt.Println("")
+		foundError = true
+	}
+
+	if foundError {
+		os.Exit(1)
 	}
 
 }

@@ -143,18 +143,26 @@ func CreateV2Workspace(
 func CreateAndPopulateV2Workspace(
 	mp MigrationPlan,
 	tfToken, vcsTokenID string,
-) error {
+) ([]string, error) {
 
 	v1Vars, err := GetTFVarsFromV1Config(mp.LegacyOrg, mp.LegacyName, tfToken)
 	if err != nil {
-		return err
+		return []string{}, err
 	}
 
 	CreateV2Workspace(mp, tfToken, vcsTokenID)
 
 	CreateAllV2Variables(mp.NewOrg, mp.NewName, tfToken, v1Vars)
+	sensitiveVars := []string{}
+	sensitiveValue := "TF_ENTERPRISE_SENSITIVE_VAR"
 
-	return nil
+	for _, nextVar := range v1Vars {
+		if nextVar.Value == sensitiveValue {
+			sensitiveVars = append(sensitiveVars, nextVar.Key)
+		}
+	}
+
+	return sensitiveVars, nil
 }
 
 
@@ -179,12 +187,9 @@ func RunTFInit(mp MigrationPlan, tfToken string) error {
 		}
 	}
 
-	println("About to run terraform init for Legacy: ")
-
 	tfInit = fmt.Sprintf(`-backend-config=name=%s/%s`, mp.LegacyOrg, mp.LegacyName)
 
 	osCmd = exec.Command("terraform", "init", tfInit)
-
 	osCmd.Stderr = &stderr
 
 	err = osCmd.Run()
@@ -193,8 +198,6 @@ func RunTFInit(mp MigrationPlan, tfToken string) error {
 		fmt.Println(fmt.Sprint(err) + ": " + stderr.String())
 		return err
 	}
-
-	println("About to run terraform init for New Version")
 
 	// Run tf init with new version
 	tfInit = fmt.Sprintf(`-backend-config=name=%s/%s`, mp.NewOrg, mp.NewName)
@@ -224,7 +227,6 @@ func RunTFInit(mp MigrationPlan, tfToken string) error {
 		return err
 	}
 
-	println("Completed terraform init with no errors.")
 	return nil
 }
 
@@ -243,11 +245,14 @@ func RunTFInit(mp MigrationPlan, tfToken string) error {
 //
 // It also runs `terraform init` with the legacy information and then again with
 // the new version.
-func CreateAndPopulateAllV2Workspaces(configFile, tfToken, vcsTokenID string) error {
+func CreateAndPopulateAllV2Workspaces(configFile, tfToken, vcsTokenID string) (map[string][]string, error) {
+	var sensitiveVars []string
+	completed := map[string][]string{}
+
 	// Get config contents
 	csvFile, err := os.Open(configFile)
 	if err != nil {
-		return err
+		return completed, err
 	}
 
 	reader := csv.NewReader(bufio.NewReader(csvFile))
@@ -256,7 +261,7 @@ func CreateAndPopulateAllV2Workspaces(configFile, tfToken, vcsTokenID string) er
 	_, err = reader.Read()
 	if err != nil {
 		newErr := fmt.Errorf("Error reading first row of the plan ...\n %s", err.Error())
-		return newErr
+		return completed, newErr
 	}
 
 	for rowNum := 2; ; rowNum++ {
@@ -265,7 +270,7 @@ func CreateAndPopulateAllV2Workspaces(configFile, tfToken, vcsTokenID string) er
 			break
 		} else if err != nil {
 			newErr := fmt.Errorf("Error reading row %d of the plan ...\n %s", rowNum, err.Error())
-			return newErr
+			return completed, newErr
 		}
 
 		migrationPlan, err := NewMigrationPlan(line)
@@ -274,16 +279,18 @@ func CreateAndPopulateAllV2Workspaces(configFile, tfToken, vcsTokenID string) er
 			continue
 		}
 
-		err = CreateAndPopulateV2Workspace(migrationPlan, tfToken, vcsTokenID)
+		sensitiveVars, err = CreateAndPopulateV2Workspace(migrationPlan, tfToken, vcsTokenID)
 		if err != nil {
-			return err
+			return completed, err
 		}
+
+		completed[migrationPlan.NewName] = sensitiveVars
 
 		err = RunTFInit(migrationPlan, tfToken)
 		if err != nil {
-			return err
+			return completed, err
 		}
 	}
 
-	return nil
+	return completed, nil
 }

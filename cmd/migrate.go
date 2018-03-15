@@ -16,9 +16,7 @@ package cmd
 
 import (
 	"fmt"
-
 	migrator "github.com/silinternational/terraform-enterprise-migrator/lib"
-
 	"github.com/spf13/cobra"
 )
 
@@ -35,23 +33,21 @@ var migrateCmd = &cobra.Command{
 
 func init() {
 	rootCmd.AddCommand(migrateCmd)
-
-	// Here you will define your flags and configuration settings.
-
-	// Cobra supports Persistent Flags which will work for this command
-	// and all subcommands, e.g.:
-	// planCmd.PersistentFlags().String("foo", "", "A help for foo")
-
-	// Cobra supports local flags which will only run when this command
-	// is called directly, e.g.:
 	migrateCmd.Flags().StringVarP(&planFile, "file", "f", "plan.csv", "optional - Name of migration plan CSV file")
 }
 
 func runMigration(planFile string) {
 	fmt.Println("migrate called using config file: " + planFile)
-	err := migrator.CreateAndPopulateAllV2Workspaces(planFile, atlasToken, vcsToken)
+	completed, err := migrator.CreateAndPopulateAllV2Workspaces(planFile, atlasToken, vcsToken)
 	if err != nil {
 		fmt.Println(err.Error())
 	}
-
+	println("\n  **** Completed Workspaces and their Sensitive Variables ****")
+	for workspace, sensitiveVars := range completed {
+		println("> " + workspace)
+		for _, nextVar := range sensitiveVars {
+			println("   - " + nextVar)
+		}
+		println("")
+	}
 }

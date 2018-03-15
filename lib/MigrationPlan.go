@@ -49,7 +49,8 @@ func (p *MigrationPlan) getColNames() []string {
 // NewMigrationPlan creates a new MigrationPlan from a csv row
 func NewMigrationPlan(values []string) (MigrationPlan, error) {
 	var mp MigrationPlan
-	columnCount := 8
+	colNames := mp.getColNames()
+	columnCount := len(colNames)
 	if len(values) < columnCount {
 		return mp, fmt.Errorf("Too few values to create MigrationPlan. Need: %d, but only got %d",
 			columnCount, len(values),

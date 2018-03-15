@@ -2,13 +2,13 @@ package lib
 
 import (
 	"bufio"
+	"bytes"
 	"encoding/csv"
 	"fmt"
 	"io"
 	"os"
 	"os/exec"
 	"strings"
-	"bytes"
 )
 
 // V2Workspace holds the information needed to create a v2 terraform workspace
@@ -165,23 +165,22 @@ func CreateAndPopulateV2Workspace(
 	return sensitiveVars, nil
 }
 
-
 // RunTFInit ...
-//  - removes old tf state files
-//  - runs tf init with old versions
-//  - runs tf init with new version
+//  - removes old terraform.tfstate files
+//  - runs terraform init with old versions
+//  - runs terraform init with new version
 func RunTFInit(mp MigrationPlan, tfToken string) error {
 	var tfInit string
 	var err error
 	var osCmd *exec.Cmd
 	var stderr bytes.Buffer
 
-	stateFile := ".terraform/terraform.tfstate"
+	stateFile := ".terraform"
 
 	// Remove previous state file, if it exists
 	_, err = os.Stat(stateFile)
 	if err == nil {
-		err = os.Remove(stateFile)
+		err = os.RemoveAll(stateFile)
 		if err != nil {
 			return err
 		}

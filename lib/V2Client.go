@@ -12,6 +12,7 @@ import (
 	//"io/ioutil"
 	"time"
 	"encoding/json"
+	"text/tabwriter"
 )
 
 // V2Workspace holds the information needed to create a v2 terraform workspace
@@ -249,6 +250,8 @@ func RunTFInit(mp MigrationPlan, tfToken string) error {
 // the new version.
 func CreateAndPopulateAllV2Workspaces(configFile, tfToken, vcsUsername string) (map[string][]string, error) {
 	var sensitiveVars []string
+	var allPlans []MigrationPlan
+
 	completed := map[string][]string{}
 
 	// Get config contents
@@ -282,6 +285,39 @@ func CreateAndPopulateAllV2Workspaces(configFile, tfToken, vcsUsername string) (
 			fmt.Printf("Skipping row %d because of an error ...\n %s\n", rowNum, err.Error())
 			continue
 		}
+		allPlans = append(allPlans, migrationPlan)
+	}
+
+	println("\n\n *** About to create these version 2 workspaces\n")
+
+	w := tabwriter.NewWriter(os.Stdout, 0, 3, 3, ' ', 0)
+	tabbedNames := "Legacy Org/Legacy Environment\tNew Org/New Workspace"
+	fmt.Fprintln(w, tabbedNames)
+	fmt.Fprintln(w, "-----------------------------\t---------------------")
+
+	for _, migrationPlan := range allPlans {
+		nextMigration := fmt.Sprintf(
+			"%s/%s\t%s/%s",
+			migrationPlan.LegacyOrg,
+			migrationPlan.LegacyName,
+			migrationPlan.NewOrg,
+			migrationPlan.NewName,
+		)
+		fmt.Fprintln(w, nextMigration)
+	}
+	w.Flush()
+	fmt.Print("\nTo abort press A (or a). Hit any other key to continue.  ")
+	var userResponse string
+	fmt.Scanln(&userResponse)
+
+	if userResponse == "a" || userResponse == "A" {
+		err = fmt.Errorf(" NOTICE: User Aborted Creation of New Workspaces")
+		return completed, err
+	}
+
+	println()
+
+	for _, migrationPlan := range allPlans {
 
 		// If we have a vcsTokenID for this org use it. Otherwise, get one from the api
 		var vcsTokenID string
@@ -292,10 +328,10 @@ func CreateAndPopulateAllV2Workspaces(configFile, tfToken, vcsUsername string) (
 			tokenID, err := getVCSToken(vcsUsername, migrationPlan.NewOrg, tfToken)
 			if err != nil {
 				fmt.Printf(
-					"Skipping row %d because of an error getting the VCS Token ID for %s with %s ...\n %s\n",
+					"Skipping workspace %s because of an error getting the VCS Token ID for %s with %s ...\n %s\n",
+					migrationPlan.NewName,
 					vcsUsername,
 					migrationPlan.NewOrg,
-					rowNum,
 					err.Error(),
 				)
 				continue
@@ -306,14 +342,15 @@ func CreateAndPopulateAllV2Workspaces(configFile, tfToken, vcsUsername string) (
 
 		if vcsTokenID == "" {
 			fmt.Printf(
-				"Skipping row %d because no VCS Token ID was available for %s with %s",
+				"Skipping workspace %s because no VCS Token ID was available for %s with %s",
+				migrationPlan.NewName,
 				vcsUsername,
 				migrationPlan.NewOrg,
-				rowNum,
 			)
 			continue
 		}
 
+		fmt.Printf("  >>> Migrating %s/%s ... ", migrationPlan.NewOrg, migrationPlan.NewName)
 		sensitiveVars, err = CreateAndPopulateV2Workspace(migrationPlan, tfToken, vcsTokenID)
 		if err != nil {
 			return completed, err
@@ -325,6 +362,7 @@ func CreateAndPopulateAllV2Workspaces(configFile, tfToken, vcsUsername string) (
 		if err != nil {
 			return completed, err
 		}
+		println("Done")
 	}
 
 	return completed, nil

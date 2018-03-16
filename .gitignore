@@ -2,5 +2,5 @@
 *.tfstate
 *.tfstate.backup
 .terraform/
-terraform-enterprise-migrator
+/terraform-enterprise-migrator
 .idea/

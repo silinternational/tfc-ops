@@ -16,21 +16,38 @@ package cmd
 
 import (
 	"fmt"
+	"os"
 
 	migrator "github.com/silinternational/terraform-enterprise-migrator/lib"
 	"github.com/spf13/cobra"
 )
 
+var legacyOrg string
+var newOrg string
+var planFile string
+
 // planCmd represents the plan command
 var planCmd = &cobra.Command{
 	Use:   "plan",
 	Short: "Generate migration plan file",
-	Long: `Generates a plan.csv file with list of environments from legacy organiazation 
-	for mapping to new organization.`,
+	Long: `Generates a plan.csv file with list of environments from legacy organization
+for mapping to new organization.`,
+	Args: cobra.ExactArgs(0),
 	Run: func(cmd *cobra.Command, args []string) {
-		fmt.Println("plan called")
-
+		if legacyOrg == "" {
+			fmt.Println("Error: The 'legacy' flag is required")
+			fmt.Println("")
+			os.Exit(1)
+		}
+		if newOrg == "" {
+			fmt.Println("Error: The 'new' flag is required")
+			fmt.Println("")
+			os.Exit(1)
+		}
+		fmt.Println("Creating migration plan...")
 		envList := migrator.GetAllEnvNamesFromV1API(atlasToken)
+		plans := migrator.GetBasePlansFromEnvNames(envList, legacyOrg, newOrg)
+		migrator.CreatePlanFile(planFile, plans)
 		fmt.Println(envList)
 	},
 }
@@ -46,5 +63,7 @@ func init() {
 
 	// Cobra supports local flags which will only run when this command
 	// is called directly, e.g.:
-	// planCmd.Flags().BoolP("toggle", "t", false, "Help message for toggle")
+	planCmd.Flags().StringVarP(&legacyOrg, "legacy", "l", "", "required - Name of Terraform Enterprise Legacy Organization")
+	planCmd.Flags().StringVarP(&newOrg, "new", "n", "", "required - Name of new Terraform Enterprise Organization")
+	planCmd.Flags().StringVarP(&planFile, "file", "f", "plan.csv", "optional - Name of migration plan CSV file")
 }

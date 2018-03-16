@@ -1,0 +1,6 @@
+*.csv
+*.tfstate
+*.tfstate.backup
+.terraform/
+/terraform-enterprise-migrator
+.idea/

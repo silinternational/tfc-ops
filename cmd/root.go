@@ -25,13 +25,12 @@ import (
 
 var cfgFile string
 var atlasToken string
-var vcsToken string
 
 // rootCmd represents the base command when called without any subcommands
 var rootCmd = &cobra.Command{
 	Use:   "terraform-enterprise-migrator",
 	Short: "Migration script for moving environments from Terraform Enterprise (Legacy) to Terraform Enterprise",
-	Long: `Migration is a two step process. First run plan, modify the generated file as needed, 
+	Long: `Migration is a three step process. First run plan, modify the generated file as needed, 
 then run migrate to process the plan file`,
 	// Uncomment the following line if your bare application
 	// has an action associated with it:
@@ -53,23 +52,24 @@ func init() {
 	// Here you will define your flags and configuration settings.
 	// Cobra supports persistent flags, which, if defined here,
 	// will be global for your application.
-	rootCmd.PersistentFlags().StringVar(&cfgFile, "config", "", "config file (default is $HOME/.terraform-enterprise-migrator.yaml)")
+	//rootCmd.PersistentFlags().StringVar(&cfgFile, "config", "", "config file (default is $HOME/.terraform-enterprise-migrator.yaml)")
 
 	// Cobra also supports local flags, which will only run
 	// when this action is called directly.
 	//rootCmd.Flags().BoolP("toggle", "t", false, "Help message for toggle")
 
+	foundError := false
+
 	// Get Tokens from env vars
 	atlasToken = os.Getenv("ATLAS_TOKEN")
 	if atlasToken == "" {
-		fmt.Println("Warning: Environment variable for ATLAST_TOKEN is required to execute plan and migration")
+		fmt.Println("Error: Environment variable for ATLAST_TOKEN is required to execute plan and migration")
 		fmt.Println("")
+		foundError = true
 	}
 
-	vcsToken = os.Getenv("ATLAS_VCS_TOKEN")
-	if vcsToken == "" {
-		fmt.Println("Warning: Environment variable for ATLAST_VCS_TOKEN is required to execute plan and migration")
-		fmt.Println("")
+	if foundError {
+		os.Exit(1)
 	}
 
 }

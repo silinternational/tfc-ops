@@ -9,6 +9,9 @@ import (
 	"os"
 	"os/exec"
 	"strings"
+	//"io/ioutil"
+	"time"
+	"encoding/json"
 )
 
 // V2Workspace holds the information needed to create a v2 terraform workspace
@@ -244,7 +247,7 @@ func RunTFInit(mp MigrationPlan, tfToken string) error {
 //
 // It also runs `terraform init` with the legacy information and then again with
 // the new version.
-func CreateAndPopulateAllV2Workspaces(configFile, tfToken, vcsTokenID string) (map[string][]string, error) {
+func CreateAndPopulateAllV2Workspaces(configFile, tfToken, vcsUsername string) (map[string][]string, error) {
 	var sensitiveVars []string
 	completed := map[string][]string{}
 
@@ -263,6 +266,8 @@ func CreateAndPopulateAllV2Workspaces(configFile, tfToken, vcsTokenID string) (m
 		return completed, newErr
 	}
 
+	vcsTokenIDs := map[string]string{}
+
 	for rowNum := 2; ; rowNum++ {
 		line, err := reader.Read()
 		if err == io.EOF {
@@ -275,6 +280,37 @@ func CreateAndPopulateAllV2Workspaces(configFile, tfToken, vcsTokenID string) (m
 		migrationPlan, err := NewMigrationPlan(line)
 		if err != nil {
 			fmt.Printf("Skipping row %d because of an error ...\n %s\n", rowNum, err.Error())
+			continue
+		}
+
+		// If we have a vcsTokenID for this org use it. Otherwise, get one from the api
+		var vcsTokenID string
+		oldID, haveOneAlready := vcsTokenIDs[migrationPlan.NewOrg]
+		if haveOneAlready {
+			vcsTokenID = oldID
+		} else {
+			tokenID, err := getVCSToken(vcsUsername, migrationPlan.NewOrg, tfToken)
+			if err != nil {
+				fmt.Printf(
+					"Skipping row %d because of an error getting the VCS Token ID for %s with %s ...\n %s\n",
+					vcsUsername,
+					migrationPlan.NewOrg,
+					rowNum,
+					err.Error(),
+				)
+				continue
+			}
+			vcsTokenIDs[migrationPlan.NewOrg] = tokenID
+			vcsTokenID = tokenID
+		}
+
+		if vcsTokenID == "" {
+			fmt.Printf(
+				"Skipping row %d because no VCS Token ID was available for %s with %s",
+				vcsUsername,
+				migrationPlan.NewOrg,
+				rowNum,
+			)
 			continue
 		}
 
@@ -292,4 +328,60 @@ func CreateAndPopulateAllV2Workspaces(configFile, tfToken, vcsTokenID string) (m
 	}
 
 	return completed, nil
+}
+
+
+
+type OAuthTokens struct {
+	Data []struct {
+		ID         string `json:"id"`
+		Type       string `json:"type"`
+		Attributes struct {
+			CreatedAt           time.Time `json:"created-at"`
+			ServiceProviderUser string    `json:"service-provider-user"`
+			HasSSHKey           bool      `json:"has-ssh-key"`
+		} `json:"attributes"`
+		Relationships struct {
+			OauthClient struct {
+				Data struct {
+					ID   string `json:"id"`
+					Type string `json:"type"`
+				} `json:"data"`
+				Links struct {
+					Related string `json:"related"`
+				} `json:"links"`
+			} `json:"oauth-client"`
+		} `json:"relationships"`
+		Links struct {
+			Self string `json:"self"`
+		} `json:"links"`
+	} `json:"data"`
+}
+
+
+func getVCSToken(vcsUsername, orgName, tfToken string) (string, error) {
+	url := fmt.Sprintf("https://app.terraform.io/api/v2/organizations/%s/oauth-tokens", orgName)
+	headers := map[string]string{"Authorization": "Bearer " + tfToken}
+	resp := CallAPI("GET", url, "", headers)
+
+	defer resp.Body.Close()
+	//bodyBytes, _ := ioutil.ReadAll(resp.Body)
+	//fmt.Println(string(bodyBytes))
+
+	var oauthTokens OAuthTokens
+
+	if err := json.NewDecoder(resp.Body).Decode(&oauthTokens); err != nil {
+		return "", err
+	}
+
+	vcsTokenID := ""
+
+	for _, nextToken := range oauthTokens.Data {
+		if nextToken.Attributes.ServiceProviderUser == vcsUsername {
+			vcsTokenID = nextToken.ID
+			break
+		}
+	}
+
+	return vcsTokenID, nil
 }

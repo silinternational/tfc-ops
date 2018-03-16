@@ -25,7 +25,6 @@ import (
 
 var cfgFile string
 var atlasToken string
-var vcsToken string
 
 // rootCmd represents the base command when called without any subcommands
 var rootCmd = &cobra.Command{
@@ -65,13 +64,6 @@ func init() {
 	atlasToken = os.Getenv("ATLAS_TOKEN")
 	if atlasToken == "" {
 		fmt.Println("Error: Environment variable for ATLAST_TOKEN is required to execute plan and migration")
-		fmt.Println("")
-		foundError = true
-	}
-
-	vcsToken = os.Getenv("ATLAS_VCS_TOKEN")
-	if vcsToken == "" {
-		fmt.Println("Error: Environment variable for ATLAST_VCS_TOKEN is required to execute plan and migration")
 		fmt.Println("")
 		foundError = true
 	}

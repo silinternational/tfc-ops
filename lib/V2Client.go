@@ -291,7 +291,7 @@ func CreateAndPopulateAllV2Workspaces(configFile, tfToken, vcsUsername string) (
 	println("\n\n *** The following environments will be migrated\n")
 
 	w := tabwriter.NewWriter(os.Stdout, 0, 3, 3, ' ', 0)
-	tabbedNames := "Legacy Org/Legacy Environment\tNew Org/New Workspace"
+	tabbedNames := "Legacy Environment\tNew Workspace"
 	fmt.Fprintln(w, tabbedNames)
 	fmt.Fprintln(w, "-----------------------------\t---------------------")
 

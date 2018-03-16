@@ -28,9 +28,9 @@ var atlasToken string
 
 // rootCmd represents the base command when called without any subcommands
 var rootCmd = &cobra.Command{
-	Use:   "tfe-migrate",
+	Use:   "terraform-enterprise-migrator",
 	Short: "Migration script for moving environments from Terraform Enterprise (Legacy) to Terraform Enterprise",
-	Long: `Migration is a two step process. First run plan, modify the generated file as needed, 
+	Long: `Migration is a three step process. First run plan, modify the generated file as needed, 
 then run migrate to process the plan file`,
 	// Uncomment the following line if your bare application
 	// has an action associated with it:
@@ -52,7 +52,7 @@ func init() {
 	// Here you will define your flags and configuration settings.
 	// Cobra supports persistent flags, which, if defined here,
 	// will be global for your application.
-	rootCmd.PersistentFlags().StringVar(&cfgFile, "config", "", "config file (default is $HOME/.terraform-enterprise-migrator.yaml)")
+	//rootCmd.PersistentFlags().StringVar(&cfgFile, "config", "", "config file (default is $HOME/.terraform-enterprise-migrator.yaml)")
 
 	// Cobra also supports local flags, which will only run
 	// when this action is called directly.

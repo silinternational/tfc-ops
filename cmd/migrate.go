@@ -27,7 +27,7 @@ var vcsUsername string
 var migrateCmd = &cobra.Command{
 	Use:   "migrate",
 	Short: "Perform migration plan",
-	Long:  `Processes plan.csv to validate migration plan and peform the work`,
+	Long:  `Processes plan.csv to validate migration plan and perform the work`,
 	Args:  cobra.ExactArgs(0),
 	Run: func(cmd *cobra.Command, args []string) {
 		if vcsUsername == "" {

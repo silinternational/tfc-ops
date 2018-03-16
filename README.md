@@ -1,7 +1,7 @@
 # Terraform Enterprise Migration Tool
 This application is used to migrate Terraform Enterprise (TFE) Legacy environments to new Terraform Enterprise workspaces.
 HashiCorp rebuilt the Terraform Enterprise experience and is ending support for the legacy version on March 30, 2018. 
-We has an organization have a LOT of Terraform environments ~75 at this time, so moving our environments from the 
+We as an organization have a LOT of Terraform environments ~75 at this time, so moving our environments from the
 legacy version to the new version manually wasn't a reasonable task. Thankfully both legacy and new services have 
 APIs which were able to provide the majority of information needed to automate the migration.
 
@@ -39,7 +39,7 @@ will be printed out along with any sensitive variables for each so you know whic
 2. Edit `plan.csv` however you want and fill in all empty columns (`TerraformVersion`,`RepoID`,`Branch`,`Directory`)
 3. Run migration: `terraform-enterprise-migrator migrate -u vcsUsername`. Notice the `-u` flag here, the value should be
 the username for the version control system you are connected with, for example your Github username. TFE uses the 
-existing VCS connection you have when creating the new workspace and attaching webhook to VCS repo. 
+existing VCS connection you have when creating the new workspace and attaching a webhook to the VCS repo.
 
 ## Example
 Here is a video of us using this script to migrate a dozen environments from legacy to new. You can see the script 
@@ -90,7 +90,7 @@ Flags:
 ### Migrate Help
 ```text
 $ terraform-enterprise-migrator migrate -h
-Processes plan.csv to validate migration plan and peform the work
+Processes plan.csv to validate migration plan and perform the work
 
 Usage:
   terraform-enterprise-migrator migrate [flags]

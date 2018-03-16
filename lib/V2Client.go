@@ -288,7 +288,7 @@ func CreateAndPopulateAllV2Workspaces(configFile, tfToken, vcsUsername string) (
 		allPlans = append(allPlans, migrationPlan)
 	}
 
-	println("\n\n *** About to create these version 2 workspaces\n")
+	println("\n\n *** The following environments will be migrated\n")
 
 	w := tabwriter.NewWriter(os.Stdout, 0, 3, 3, ' ', 0)
 	tabbedNames := "Legacy Org/Legacy Environment\tNew Org/New Workspace"
@@ -306,12 +306,12 @@ func CreateAndPopulateAllV2Workspaces(configFile, tfToken, vcsUsername string) (
 		fmt.Fprintln(w, nextMigration)
 	}
 	w.Flush()
-	fmt.Print("\nTo abort press A (or a). Hit any other key to continue.  ")
+	fmt.Print("\nContinue? [y/N]  ")
 	var userResponse string
 	fmt.Scanln(&userResponse)
 
-	if userResponse == "a" || userResponse == "A" {
-		err = fmt.Errorf(" NOTICE: User Aborted Creation of New Workspaces")
+	if userResponse != "y" && userResponse != "Y" {
+		err = fmt.Errorf(" NOTICE: User canceled migration")
 		return completed, err
 	}
 

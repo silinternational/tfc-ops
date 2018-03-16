@@ -18,7 +18,10 @@ import (
 	"fmt"
 	migrator "github.com/silinternational/terraform-enterprise-migrator/lib"
 	"github.com/spf13/cobra"
+	"os"
 )
+
+var vcsUsername string
 
 // migrateCmd represents the migrate command
 var migrateCmd = &cobra.Command{
@@ -27,18 +30,29 @@ var migrateCmd = &cobra.Command{
 	Long:  `Processes plan.csv to validate migration plan and peform the work`,
 	Args:  cobra.ExactArgs(0),
 	Run: func(cmd *cobra.Command, args []string) {
-		runMigration(planFile)
+		if vcsUsername == "" {
+			fmt.Println("Error: The 'vcs-username' flag is required\n")
+			os.Exit(1)
+		}
+		runMigration(vcsUsername, planFile)
 	},
 }
 
 func init() {
 	rootCmd.AddCommand(migrateCmd)
+	migrateCmd.Flags().StringVarP(
+		&vcsUsername,
+		"vcs-username",
+		"v",
+		"",
+		`Name of the VCS User in TF Enterprise (new version) to allow us to get the right VCS Token ID`,
+	)
 	migrateCmd.Flags().StringVarP(&planFile, "file", "f", "plan.csv", "optional - Name of migration plan CSV file")
 }
 
-func runMigration(planFile string) {
+func runMigration(vcsUserName, planFile string) {
 	fmt.Println("migrate called using config file: " + planFile)
-	completed, err := migrator.CreateAndPopulateAllV2Workspaces(planFile, atlasToken, vcsToken)
+	completed, err := migrator.CreateAndPopulateAllV2Workspaces(planFile, atlasToken, vcsUsername)
 	if err != nil {
 		fmt.Println(err.Error())
 	}
@@ -51,3 +65,4 @@ func runMigration(planFile string) {
 		println("")
 	}
 }
+

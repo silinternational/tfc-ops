@@ -31,7 +31,7 @@ var rootCmd = &cobra.Command{
 	Use:   "terraform-enterprise-migrator",
 	Short: "Migration script for moving environments from Terraform Enterprise (Legacy) to Terraform Enterprise",
 	Long: `Migration is a three step process. First run plan, modify the generated file as needed, 
-then run migrate to process the plan file`,
+then run migrate to process the plan file. \n Alternatively, you can clone a V2 workspace.`,
 	// Uncomment the following line if your bare application
 	// has an action associated with it:
 	//	Run: func(cmd *cobra.Command, args []string) { },

@@ -63,7 +63,7 @@ func init() {
 	// Get Tokens from env vars
 	atlasToken = os.Getenv("ATLAS_TOKEN")
 	if atlasToken == "" {
-		fmt.Println("Error: Environment variable for ATLAST_TOKEN is required to execute plan and migration")
+		fmt.Println("Error: Environment variable for ATLAS_TOKEN is required to execute plan and migration")
 		fmt.Println("")
 		foundError = true
 	}

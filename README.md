@@ -101,6 +101,22 @@ Flags:
   -u, --vcs-username string   Name of the VCS User in TF Enterprise (new version) to allow us to get the right VCS Token ID (the GitHub or Bitbucket username used to connect TFE)
 ```
 
+### Clone Help
+```text
+$ terraform-enterprise-migrator clone -h
+Clone a TF Enterprise Version 2 Workspace
+
+Usage:
+  terraform-enterprise-migrator clone [flags]
+
+Flags:
+  -c, --copyVariables             optional (e.g. "-c=true") whether to copy the values of the Source Workspace variables.
+  -h, --help                      help for clone
+  -n, --new-workspace string      Name of the New Workspace in TF Enterprise (version 2)
+  -o, --organization string       Name of the Organization in TF Enterprise (version 2)
+  -s, --source-workspace string   Name of the Source Workspace in TF Enterprise (version 2)
+```
+
 ## License
 terraform-enterprise-monitor is released under the Apache 2.0 license. See 
 [LICENSE](https://github.com/silinternational/terraform-enterprise-monitor/blob/master/LICENSE)

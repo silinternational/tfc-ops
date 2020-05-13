@@ -379,7 +379,7 @@ func GetCreateV2WorkspacePayload(mp MigrationPlan, vcsTokenID string) string {
 func CreateV2Workspace(
 	mp MigrationPlan,
 	tfToken, vcsTokenID string,
-) {
+)  (string, error) {
 	url := fmt.Sprintf(
 		"https://app.terraform.io/api/v2/organizations/%s/workspaces",
 		mp.NewOrg,
@@ -396,6 +396,13 @@ func CreateV2Workspace(
 	defer resp.Body.Close()
 	// bodyBytes, _ := ioutil.ReadAll(resp.Body)
 	// fmt.Println(string(bodyBytes))
+
+	var v2WsData V2WorkspaceData
+
+	if err := json.NewDecoder(resp.Body).Decode(&v2WsData); err != nil {
+		return "", fmt.Errorf("error getting created workspace data: %s\n", err)
+	}
+	return v2WsData.Data.ID, nil
 }
 
 // CreateAndPopulateV2Workspace makes several api calls to get the variable values
@@ -631,7 +638,10 @@ func CreateAndPopulateAllV2Workspaces(configFile, tfToken, vcsUsername string) (
 //  and then creates a clone of it with the same data.
 // If the copyVariables param is set to true, then all the non-sensitive variable values will be added to the new
 //   workspace.  Otherwise, they will be set to "REPLACE_THIS_VALUE"
-func CloneV2Workspace(organization, sourceWorkspace, newWorkspace, tfToken string, copyVariables bool) ([]string, error) {
+func CloneV2Workspace(
+	organization, newOrganization, sourceWorkspace, newWorkspace, tfToken, tfTokenDest string,
+	copyVariables, differentDestinationAccount bool,
+	) ([]string, error) {
 
 	v2WsData, err := GetV2WorkspaceData(organization, sourceWorkspace, tfToken)
 	if err != nil {
@@ -643,8 +653,12 @@ func CloneV2Workspace(organization, sourceWorkspace, newWorkspace, tfToken strin
 		return []string{}, err
 	}
 
+	if ! differentDestinationAccount {
+		newOrganization = organization
+	}
+
 	mp :=  MigrationPlan  {
-		NewOrg: organization,
+		NewOrg: newOrganization,
 		NewName: newWorkspace,
 		TerraformVersion: v2WsData.Data.Attributes.TerraformVersion,
 		RepoID: v2WsData.Data.Attributes.VCSRepo.ID,
@@ -677,6 +691,21 @@ func CloneV2Workspace(organization, sourceWorkspace, newWorkspace, tfToken strin
 			sensitiveVars = append(sensitiveVars, nextVar.Key)
 		}
 		tfVars = append(tfVars, tfVar)
+	}
+
+	if differentDestinationAccount {
+		CreateV2Workspace(mp, tfTokenDest, v2WsData.Data.Attributes.VCSRepo.TokenID)
+		CreateAllV2Variables(mp.NewOrg, mp.NewName, tfTokenDest, tfVars)
+
+		//oldState, err := GetCurrentStateFromV2(v2WsData.Data.ID, tfToken)
+		//if err != nil {
+		//	return sensitiveVars, fmt.Errorf("error getting current state from original workspace: %s", err)
+		//}
+		//fmt.Printf("\nOLDSTATE %v\n", oldState.Data.ID)
+		//
+		//err = PushCurrentStateToNewWorkspace(oldState, v2WsData.Data.ID, tfTokenDest)
+
+		return sensitiveVars, nil //, err
 	}
 
 	CreateV2Workspace(mp, tfToken, v2WsData.Data.Attributes.VCSRepo.TokenID)

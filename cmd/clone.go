@@ -22,7 +22,9 @@ import (
 )
 
 var copyVariables bool
+var differentDestinationAccount bool
 var organization string
+var newOrganization string
 var sourceWorkspace string
 var newWorkspace string
 
@@ -45,7 +47,11 @@ var cloneCmd = &cobra.Command{
 			fmt.Println("Error: The 'new-workspace' flag is required\n")
 			os.Exit(1)
 		}
-		runClone(organization, sourceWorkspace, newWorkspace, copyVariables)
+		if differentDestinationAccount && newOrganization == "" {
+			fmt.Println("Error: The 'newOrganization' '-p' flag is required for a different destination account.\n")
+			os.Exit(1)
+		}
+		runClone(organization, newOrganization, sourceWorkspace, newWorkspace, copyVariables, differentDestinationAccount)
 	},
 }
 
@@ -57,6 +63,13 @@ func init() {
 		"o",
 		"",
 		`Name of the Organization in TF Enterprise (version 2)`,
+	)
+	cloneCmd.Flags().StringVarP(
+		&newOrganization,
+		"new-organization",
+		"p",
+		"",
+		`Name of the Destination Organization in TF Enterprise (version 2)`,
 	)
 	cloneCmd.Flags().StringVarP(
 		&sourceWorkspace,
@@ -79,11 +92,19 @@ func init() {
 		false,
 		`optional (e.g. "-c=true") whether to copy the values of the Source Workspace variables.`,
 	)
+	cloneCmd.Flags().BoolVarP(
+		&differentDestinationAccount,
+		"differentDestinationAccount",
+		"d",
+		false,
+		`optional (e.g. "-d=true") whether to clone to a different TF account.`,
+	)
 }
 
-func runClone(organization, sourceWorkspace, newWorkspace string, copyVariables bool) {
-	fmt.Printf("clone called using %s, %s, %s, copyVariables: %t\n", organization, sourceWorkspace, newWorkspace, copyVariables)
-	sensitiveVars, err := cloner.CloneV2Workspace(organization, sourceWorkspace, newWorkspace, atlasToken, copyVariables)
+func runClone(organization, newOrganization, sourceWorkspace, newWorkspace string, copyVariables, differentDestinationAccount bool) {
+	fmt.Printf("clone called using %s, %s, %s, copyVariables: %t, differentDestinationAccount: %t\n", organization, sourceWorkspace, newWorkspace, copyVariables, differentDestinationAccount)
+	sensitiveVars, err := cloner.CloneV2Workspace(
+		organization, newOrganization, sourceWorkspace, newWorkspace, atlasToken, atlasTokenDestination, copyVariables, differentDestinationAccount)
 	if err != nil {
 		fmt.Println(err.Error())
 	} else {

@@ -25,6 +25,7 @@ import (
 
 var cfgFile string
 var atlasToken string
+var atlasTokenDestination string
 
 // rootCmd represents the base command when called without any subcommands
 var rootCmd = &cobra.Command{
@@ -70,6 +71,13 @@ func init() {
 
 	if foundError {
 		os.Exit(1)
+	}
+
+	atlasTokenDestination = os.Getenv("ATLAS_TOKEN_DESTINATION")
+	if atlasTokenDestination == "" {
+		atlasTokenDestination = atlasToken
+		fmt.Println("Info: Environment variable for ATLAS_TOKEN_DESTINATION is not set.")
+		fmt.Println("      Using ATLAS_TOKEN for destination account as well.\n")
 	}
 
 }

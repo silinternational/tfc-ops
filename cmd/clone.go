@@ -27,6 +27,7 @@ var organization string
 var newOrganization string
 var sourceWorkspace string
 var newWorkspace string
+var newVCSTokenID string
 
 // cloneCmd represents the clone command
 var cloneCmd = &cobra.Command{
@@ -47,11 +48,18 @@ var cloneCmd = &cobra.Command{
 			fmt.Println("Error: The 'new-workspace' flag is required\n")
 			os.Exit(1)
 		}
-		if differentDestinationAccount && newOrganization == "" {
-			fmt.Println("Error: The 'newOrganization' '-p' flag is required for a different destination account.\n")
-			os.Exit(1)
+		if differentDestinationAccount {
+
+		 if newOrganization == "" {
+			 fmt.Println("Error: The 'new-organization' '-p' flag is required for a different destination account.\n")
+			 os.Exit(1)
+		 }
+		 if newVCSTokenID == "" {
+			 fmt.Println("Error: The 'new-vcs-token-id' '-v' flag is required for a different destination account.\n")
+			 os.Exit(1)
+		 }
 		}
-		runClone(organization, newOrganization, sourceWorkspace, newWorkspace, copyVariables, differentDestinationAccount)
+		runClone(organization, newOrganization, sourceWorkspace, newWorkspace, newVCSTokenID, copyVariables, differentDestinationAccount)
 	},
 }
 
@@ -85,6 +93,13 @@ func init() {
 		"",
 		`Name of the New Workspace in TF Enterprise (version 2)`,
 	)
+	cloneCmd.Flags().StringVarP(
+		&newVCSTokenID,
+		"new-vcs-token-id",
+		"v",
+		"",
+		`The new organization's VCS repo's oauth-token-id`,
+	)
 	cloneCmd.Flags().BoolVarP(
 		&copyVariables,
 		"copyVariables",
@@ -101,10 +116,10 @@ func init() {
 	)
 }
 
-func runClone(organization, newOrganization, sourceWorkspace, newWorkspace string, copyVariables, differentDestinationAccount bool) {
+func runClone(organization, newOrganization, sourceWorkspace, newWorkspace, newVCSTokenID string, copyVariables, differentDestinationAccount bool) {
 	fmt.Printf("clone called using %s, %s, %s, copyVariables: %t, differentDestinationAccount: %t\n", organization, sourceWorkspace, newWorkspace, copyVariables, differentDestinationAccount)
 	sensitiveVars, err := cloner.CloneV2Workspace(
-		organization, newOrganization, sourceWorkspace, newWorkspace, atlasToken, atlasTokenDestination, copyVariables, differentDestinationAccount)
+		organization, newOrganization, sourceWorkspace, newWorkspace, newVCSTokenID, atlasToken, atlasTokenDestination, copyVariables, differentDestinationAccount)
 	if err != nil {
 		fmt.Println(err.Error())
 	} else {

@@ -639,7 +639,7 @@ func CreateAndPopulateAllV2Workspaces(configFile, tfToken, vcsUsername string) (
 // If the copyVariables param is set to true, then all the non-sensitive variable values will be added to the new
 //   workspace.  Otherwise, they will be set to "REPLACE_THIS_VALUE"
 func CloneV2Workspace(
-	organization, newOrganization, sourceWorkspace, newWorkspace, tfToken, tfTokenDest string,
+	organization, newOrganization, sourceWorkspace, newWorkspace, newVCSTokenID, tfToken, tfTokenDest string,
 	copyVariables, differentDestinationAccount bool,
 	) ([]string, error) {
 
@@ -655,6 +655,7 @@ func CloneV2Workspace(
 
 	if ! differentDestinationAccount {
 		newOrganization = organization
+		newVCSTokenID = v2WsData.Data.Attributes.VCSRepo.ID
 	}
 
 	mp :=  MigrationPlan  {
@@ -694,7 +695,7 @@ func CloneV2Workspace(
 	}
 
 	if differentDestinationAccount {
-		CreateV2Workspace(mp, tfTokenDest, v2WsData.Data.Attributes.VCSRepo.TokenID)
+		CreateV2Workspace(mp, tfTokenDest, newVCSTokenID)
 		CreateAllV2Variables(mp.NewOrg, mp.NewName, tfTokenDest, tfVars)
 
 		//oldState, err := GetCurrentStateFromV2(v2WsData.Data.ID, tfToken)

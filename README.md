@@ -33,11 +33,11 @@ Get help about the command.
 
 Clone just the workspace (no variables) to the same organization.
 
-```$ go run main.go clone -o=my-org -s=source-workspace n=new-workspace```
+```$ go run main.go clone -o=my-org -s=source-workspace -n=new-workspace```
 
 Clone a workspace and its variables (but not its state) to a different organization in TF Cloud.
 
-Note: Sensitive variables will get a place holder in the new workspace, the value of
+Note: Sensitive variables will get a placeholder in the new workspace, the value of
 which will need to be corrected manually.  Also, the environment variables from the source
 workspace will need to be moved in the destination workspace from the normal variables section
 down to the environment variables section (e.g. `CONFIRM_DESTROY`).
@@ -49,7 +49,7 @@ $   -s=source-workspace -n=destination-workspace -v=org2-vcs-token
 
 Note: To copy over the state from one workspace to a clone, see lib/V2Client.RunTFInit
   for an idea of how you would do that manually using the `terraform init` command. 
-  Remember, it depends on the ALTAS_TOKEN environment variable to be set correctly first
+  Remember, it depends on the ATLAS_TOKEN environment variable to be set correctly first
   for the source organization (before the first `init` run) and then re-set for the 
   destination organization. 
 

@@ -22,9 +22,12 @@ import (
 )
 
 var copyVariables bool
+var differentDestinationAccount bool
 var organization string
+var newOrganization string
 var sourceWorkspace string
 var newWorkspace string
+var newVCSTokenID string
 
 // cloneCmd represents the clone command
 var cloneCmd = &cobra.Command{
@@ -45,7 +48,29 @@ var cloneCmd = &cobra.Command{
 			fmt.Println("Error: The 'new-workspace' flag is required\n")
 			os.Exit(1)
 		}
-		runClone(organization, sourceWorkspace, newWorkspace, copyVariables)
+		if differentDestinationAccount {
+
+		    if newOrganization == "" {
+			    fmt.Println("Error: The 'new-organization' '-p' flag is required for a different destination account.\n")
+			    os.Exit(1)
+		    }
+		    if newVCSTokenID == "" {
+			    fmt.Println("Error: The 'new-vcs-token-id' '-v' flag is required for a different destination account.\n")
+			    os.Exit(1)
+		    }
+		}
+
+		config := cloner.V2CloneConfig{
+			Organization: organization,
+			NewOrganization: newOrganization,
+			SourceWorkspace: sourceWorkspace,
+			NewWorkspace: newWorkspace,
+			NewVCSTokenID: newVCSTokenID,
+			CopyVariables: copyVariables,
+			DifferentDestinationAccount: differentDestinationAccount,
+		}
+
+		runClone(config)
 	},
 }
 
@@ -59,6 +84,13 @@ func init() {
 		`Name of the Organization in TF Enterprise (version 2)`,
 	)
 	cloneCmd.Flags().StringVarP(
+		&newOrganization,
+		"new-organization",
+		"p",
+		"",
+		`Name of the Destination Organization in TF Enterprise (version 2)`,
+	)
+	cloneCmd.Flags().StringVarP(
 		&sourceWorkspace,
 			"source-workspace",
 			"s",
@@ -70,7 +102,14 @@ func init() {
 		"new-workspace",
 		"n",
 		"",
-		`Name of the New Workspace in TF Enterprise (version 2)`,
+		`Name of the new Workspace in TF Enterprise (version 2)`,
+	)
+	cloneCmd.Flags().StringVarP(
+		&newVCSTokenID,
+		"new-vcs-token-id",
+		"v",
+		"",
+		`The new organization's VCS repo's oauth-token-id`,
 	)
 	cloneCmd.Flags().BoolVarP(
 		&copyVariables,
@@ -79,20 +118,33 @@ func init() {
 		false,
 		`optional (e.g. "-c=true") whether to copy the values of the Source Workspace variables.`,
 	)
+	cloneCmd.Flags().BoolVarP(
+		&differentDestinationAccount,
+		"differentDestinationAccount",
+		"d",
+		false,
+		`optional (e.g. "-d=true") whether to clone to a different TF account.`,
+	)
 }
 
-func runClone(organization, sourceWorkspace, newWorkspace string, copyVariables bool) {
-	fmt.Printf("clone called using %s, %s, %s, copyVariables: %t\n", organization, sourceWorkspace, newWorkspace, copyVariables)
-	sensitiveVars, err := cloner.CloneV2Workspace(organization, sourceWorkspace, newWorkspace, atlasToken, copyVariables)
+func runClone(cfg cloner.V2CloneConfig) {
+	fmt.Printf("clone called using %s, %s, %s, copyVariables: %t, differentDestinationAccount: %t\n",
+		cfg.Organization, cfg.SourceWorkspace, cfg.NewWorkspace, cfg.CopyVariables, cfg.DifferentDestinationAccount)
+	cfg.AtlasToken = atlasToken
+	cfg.AtlasTokenDestination = atlasTokenDestination
+
+	sensitiveVars, err := cloner.CloneV2Workspace(cfg)
 	if err != nil {
 		fmt.Println(err.Error())
-	} else {
-		println("\n  **** Completed Cloning ****")
-		if len(sensitiveVars) > 0 {
-			fmt.Printf("Sensitive variables for %s:%s\n", organization, newWorkspace)
-			for _, nextVar := range sensitiveVars {
-				println(nextVar)
-			}
+		return
+	}
+
+	println("\n  **** Completed Cloning ****")
+	if len(sensitiveVars) > 0 {
+		fmt.Printf("Sensitive variables for %s:%s\n", cfg.Organization, cfg.NewWorkspace)
+		for _, nextVar := range sensitiveVars {
+			println(nextVar)
 		}
 	}
+
 }

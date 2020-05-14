@@ -15,6 +15,18 @@ import (
 	"text/tabwriter"
 )
 
+type V2CloneConfig struct {
+	Organization                string
+	NewOrganization             string
+	SourceWorkspace             string
+	NewWorkspace                string
+	NewVCSTokenID               string
+	AtlasToken                  string
+	AtlasTokenDestination       string
+	CopyVariables               bool
+	DifferentDestinationAccount bool
+}
+
 // V2Workspace holds the information needed to create a v2 terraform workspace
 type V2Workspace struct {
 	Name         string
@@ -439,6 +451,8 @@ func CreateAndPopulateV2Workspace(
 //  - removes old terraform.tfstate files
 //  - runs terraform init with old versions
 //  - runs terraform init with new version
+// NOTE: This procedure can be used to copy/migrate a workspace's state to a new one.
+//  (see the -backend-config mention below and the backend.tf file in this repo)
 func RunTFInit(mp MigrationPlan, tfToken string) error {
 	var tfInit string
 	var err error
@@ -638,29 +652,26 @@ func CreateAndPopulateAllV2Workspaces(configFile, tfToken, vcsUsername string) (
 //  and then creates a clone of it with the same data.
 // If the copyVariables param is set to true, then all the non-sensitive variable values will be added to the new
 //   workspace.  Otherwise, they will be set to "REPLACE_THIS_VALUE"
-func CloneV2Workspace(
-	organization, newOrganization, sourceWorkspace, newWorkspace, newVCSTokenID, tfToken, tfTokenDest string,
-	copyVariables, differentDestinationAccount bool,
-	) ([]string, error) {
+func CloneV2Workspace(cfg V2CloneConfig) ([]string, error) {
 
-	v2WsData, err := GetV2WorkspaceData(organization, sourceWorkspace, tfToken)
+	v2WsData, err := GetV2WorkspaceData(cfg.Organization, cfg.SourceWorkspace, cfg.AtlasToken)
 	if err != nil {
 		return []string{}, err
 	}
 
-	variables, err := GetVarsFromV2(organization, sourceWorkspace, tfToken)
+	variables, err := GetVarsFromV2(cfg.Organization, cfg.SourceWorkspace, cfg.AtlasToken)
 	if err != nil {
 		return []string{}, err
 	}
 
-	if ! differentDestinationAccount {
-		newOrganization = organization
-		newVCSTokenID = v2WsData.Data.Attributes.VCSRepo.ID
+	if ! cfg.DifferentDestinationAccount {
+		cfg.NewOrganization = cfg.Organization
+		cfg.NewVCSTokenID = v2WsData.Data.Attributes.VCSRepo.ID
 	}
 
 	mp :=  MigrationPlan  {
-		NewOrg: newOrganization,
-		NewName: newWorkspace,
+		NewOrg: cfg.NewOrganization,
+		NewName: cfg.NewWorkspace,
 		TerraformVersion: v2WsData.Data.Attributes.TerraformVersion,
 		RepoID: v2WsData.Data.Attributes.VCSRepo.ID,
 		Branch: v2WsData.Data.Attributes.VCSRepo.Branch,
@@ -675,7 +686,7 @@ func CloneV2Workspace(
 	var tfVar TFVar
 
 	for _, nextVar := range variables {
-		if copyVariables {
+		if cfg.CopyVariables {
 			tfVar = TFVar{
 				Key:   nextVar.Key,
 				Value: nextVar.Value,
@@ -694,38 +705,29 @@ func CloneV2Workspace(
 		tfVars = append(tfVars, tfVar)
 	}
 
-	if differentDestinationAccount {
-		CreateV2Workspace(mp, tfTokenDest, newVCSTokenID)
-		CreateAllV2Variables(mp.NewOrg, mp.NewName, tfTokenDest, tfVars)
+	if cfg.DifferentDestinationAccount {
+		CreateV2Workspace(mp, cfg.AtlasTokenDestination, cfg.NewVCSTokenID)
+		CreateAllV2Variables(mp.NewOrg, mp.NewName, cfg.AtlasTokenDestination, tfVars)
 
-		//oldState, err := GetCurrentStateFromV2(v2WsData.Data.ID, tfToken)
-		//if err != nil {
-		//	return sensitiveVars, fmt.Errorf("error getting current state from original workspace: %s", err)
-		//}
-		//fmt.Printf("\nOLDSTATE %v\n", oldState.Data.ID)
-		//
-		//err = PushCurrentStateToNewWorkspace(oldState, v2WsData.Data.ID, tfTokenDest)
-
-		return sensitiveVars, nil //, err
+		return sensitiveVars, nil
 	}
 
-	CreateV2Workspace(mp, tfToken, v2WsData.Data.Attributes.VCSRepo.TokenID)
-
-	CreateAllV2Variables(mp.NewOrg, mp.NewName, tfToken, tfVars)
+	CreateV2Workspace(mp, cfg.AtlasToken, v2WsData.Data.Attributes.VCSRepo.TokenID)
+	CreateAllV2Variables(mp.NewOrg, mp.NewName, cfg.AtlasToken, tfVars)
 
 	// Get Team Access Data for source Workspace
-	allTeamData, err := GetTeamAccessFromV2(v2WsData.Data.ID, tfToken)
+	allTeamData, err := GetTeamAccessFromV2(v2WsData.Data.ID, cfg.AtlasToken)
 	if err != nil {
 		return sensitiveVars, err
 	}
 
 	// Get new Workspace data for its ID
-	newV2WsData, err := GetV2WorkspaceData(organization, newWorkspace, tfToken)
+	newV2WsData, err := GetV2WorkspaceData(cfg.Organization, cfg.NewWorkspace, cfg.AtlasToken)
 	if err != nil {
 		return sensitiveVars, err
 	}
 
-	AssignTeamAccessOnV2(newV2WsData.Data.ID, tfToken, allTeamData)
+	AssignTeamAccessOnV2(newV2WsData.Data.ID, cfg.AtlasToken, allTeamData)
 
 	return sensitiveVars, nil
 }

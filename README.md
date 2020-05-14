@@ -1,12 +1,10 @@
 # Terraform Enterprise Migration Tool
-This application is used to migrate Terraform Enterprise (TFE) Legacy environments to new Terraform Enterprise workspaces.
-HashiCorp rebuilt the Terraform Enterprise experience and is ending support for the legacy version on March 30, 2018. 
-We as an organization have a LOT of Terraform environments ~75 at this time, so moving our environments from the
-legacy version to the new version manually wasn't a reasonable task. Thankfully both legacy and new services have 
-APIs which were able to provide the majority of information needed to automate the migration.
+This application was initially used to migrate Terraform Enterprise (TFE) Legacy environments to new 
+Terraform Enterprise workspaces.  However, that is not needed anymore. Instead, this application 
+can be helpful in making copies/clones of a workspace and bringing its variables over to the new one.
 
-The migration process is a 3-4 step process using this application, but it is much faster than manually copying 
-everything over using the Terraform Enterprise web interface. 
+The original migration process is a 3-4 step process using this application, but it was much faster than 
+manually copying everything over using the Terraform Enterprise web interface. 
 
 ## Disclaimer
 While we were able to use this application and process to migrate ~75 environments successfully, we obviously cannot
@@ -16,6 +14,8 @@ environment and then work up before you batch migrate everything so that you can
 ## Required ENV vars
 - `ATLAS_TOKEN` - Must be set as an environment variable. Get this by going to 
 https://app.terraform.io/app/settings/tokens and generating a new token.
+- `ATLAS_TOKEN_DESTINATION` - Only necessary if cloning to a new organization in TF Cloud.
+
 
 ## Installation
 There are three ways to download/install this script:
@@ -24,7 +24,36 @@ There are three ways to download/install this script:
 2. If you're a Go developer you can install it by running `go get -u https://github.com/silinternationa/terraform-enterprise-migrator`
 3. If you're a Go developer and want to modify the source before running, clone this repo and run with `go run main.go ...`
 
-## Migration Process
+## Cloning a TF Cloud Workspace
+Examples.
+
+Get help about the command.
+
+```$ go run main.go clone -h```
+
+Clone just the workspace (no variables) to the same organization.
+
+```$ go run main.go clone -o=my-org -s=source-workspace n=new-workspace```
+
+Clone a workspace and its variables (but not its state) to a different organization in TF Cloud.
+
+Note: Sensitive variables will get a place holder in the new workspace, the value of
+which will need to be corrected manually.  Also, the environment variables from the source
+workspace will need to be moved in the destination workspace from the normal variables section
+down to the environment variables section (e.g. `CONFIRM_DESTROY`).
+
+```
+$ go run main.go clone -c=true -o=org1 -p=org2 -d=true \
+$   -s=source-workspace -n=destination-workspace -v=org2-vcs-token
+```
+
+Note: To copy over the state from one workspace to a clone, see lib/V2Client.RunTFInit
+  for an idea of how you would do that manually using the `terraform init` command. 
+  Remember, it depends on the ALTAS_TOKEN environment variable to be set correctly first
+  for the source organization (before the first `init` run) and then re-set for the 
+  destination organization. 
+
+## Original Migration Process
 As mentioned above the migration process is at least 3 steps but may be 4 if you mark any variables as `sensitive` 
 in your configurations. The first step is to generate a plan file. This file is a CSV file that you'll need to fill 
 in some missing columns of data for. Unfortunately the v1 TFE APIs do not provide all information required to create 
@@ -110,11 +139,14 @@ Usage:
   terraform-enterprise-migrator clone [flags]
 
 Flags:
-  -c, --copyVariables             optional (e.g. "-c=true") whether to copy the values of the Source Workspace variables.
-  -h, --help                      help for clone
-  -n, --new-workspace string      Name of the New Workspace in TF Enterprise (version 2)
-  -o, --organization string       Name of the Organization in TF Enterprise (version 2)
-  -s, --source-workspace string   Name of the Source Workspace in TF Enterprise (version 2)
+  -c, --copyVariables                 optional (e.g. "-c=true") whether to copy the values of the Source Workspace variables.
+  -d, --differentDestinationAccount   optional (e.g. "-d=true") whether to clone to a different TF account.
+  -h, --help                          help for clone
+  -p, --new-organization string       Name of the Destination Organization in TF Enterprise (version 2)
+  -v, --new-vcs-token-id string       The new Organization's VCS repo's oauth-token-id
+  -n, --new-workspace string          Name of the new Workspace in TF Enterprise (version 2)
+  -o, --organization string           Name of the Organization in TF Enterprise (version 2)
+  -s, --source-workspace string       Name of the Source Workspace in TF Enterprise (version 2)
 ```
 
 ## License

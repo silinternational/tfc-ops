@@ -29,7 +29,7 @@ var attributes string
 var listCmd = &cobra.Command{
 	Use:   "list",
 	Short: "List Workspaces",
-	Long: `Lists the TF workspaces with (some of) their settings`,
+	Long: `Lists the TF workspaces with (some of) their attributes`,
 	Args: cobra.ExactArgs(0),
 	Run: func(cmd *cobra.Command, args []string) {
 		if organization == "" {

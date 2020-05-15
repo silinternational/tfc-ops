@@ -53,6 +53,19 @@ Note: To copy over the state from one workspace to a clone, see lib/V2Client.Run
   for the source organization (before the first `init` run) and then re-set for the 
   destination organization. 
 
+
+## Getting a list of all TF Cloud Workspaces with some of their attributes 
+Examples.
+
+Get help about the command.
+
+```$ go run main.go list -h```
+
+List the workspaces with at least one of their attributes/pieces of data.
+
+```$ go run main.go list -o=gtis -a=id,name,createdat,environment,workingdirectory,terraformversion,vcsrepo```
+
+
 ## Original Migration Process
 As mentioned above the migration process is at least 3 steps but may be 4 if you mark any variables as `sensitive` 
 in your configurations. The first step is to generate a plan file. This file is a CSV file that you'll need to fill 
@@ -147,6 +160,20 @@ Flags:
   -n, --new-workspace string          Name of the new Workspace in TF Enterprise (version 2)
   -o, --organization string           Name of the Organization in TF Enterprise (version 2)
   -s, --source-workspace string       Name of the Source Workspace in TF Enterprise (version 2)
+```
+
+### List Help
+```text
+$ terraform-enterprise-migrator list -h
+Lists the TF workspaces with (some of) their attributes
+
+Usage:
+  terraform-enterprise-migrator list [flags]
+
+Flags:
+  -a, --attributes string     required - Workspace attributes to list: id,name,createdat,environment,workingdirectory,terraformversion,vcsrepo
+  -h, --help                  help for list
+  -o, --organization string   required - Name of Terraform Enterprise Organization
 ```
 
 ## License

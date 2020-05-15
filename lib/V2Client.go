@@ -70,55 +70,84 @@ type V2VarsResponse struct {
 	} `json:"data"`
 }
 
-// V2WorkspaceData is what is returned by the api when requesting the data for a workspace
+// V2WorkspaceData is what is returned by the api for each workspace
 type V2WorkspaceData struct {
-	Data struct {
-		ID         string `json:"id"`
-		Type       string `json:"type"`
-		Attributes struct {
-			Name             string      `json:"name"`
-			Environment      string      `json:"environment"`
-			AutoApply        bool        `json:"auto-apply"`
-			Locked           bool        `json:"locked"`
-			CreatedAt        time.Time   `json:"created-at"`
-			WorkingDirectory string `json:"working-directory"`
-			VCSRepo          struct {
-				Branch string `json:"branch"`
-				ID string `json:"identifier"`
-				TokenID string `json:"oauth-token-id"`
-			} `json:"vcs-repo"`
-			TerraformVersion string      `json:"terraform-version"`
-			Permissions      struct {
-				CanUpdate         bool `json:"can-update"`
-				CanDestroy        bool `json:"can-destroy"`
-				CanQueueDestroy   bool `json:"can-queue-destroy"`
-				CanQueueRun       bool `json:"can-queue-run"`
-				CanUpdateVariable bool `json:"can-update-variable"`
-				CanLock           bool `json:"can-lock"`
-				CanReadSettings   bool `json:"can-read-settings"`
-			} `json:"permissions"`
-			Actions struct {
-				IsDestroyable bool `json:"is-destroyable"`
-			} `json:"actions"`
-		} `json:"attributes"`
-		Relationships struct {
-			Organization struct {
-				Data struct {
-					ID   string `json:"id"`
-					Type string `json:"type"`
-				} `json:"data"`
-			} `json:"organization"`
-			LatestRun struct {
-				Data interface{} `json:"data"`
-			} `json:"latest-run"`
-			CurrentRun struct {
-				Data interface{} `json:"data"`
-			} `json:"current-run"`
-		} `json:"relationships"`
-		Links struct {
-			Self string `json:"self"`
-		} `json:"links"`
-	} `json:"data"`
+	ID         string `json:"id"`
+	Type       string `json:"type"`
+	Attributes struct {
+		Name             string      `json:"name"`
+		Environment      string      `json:"environment"`
+		AutoApply        bool        `json:"auto-apply"`
+		Locked           bool        `json:"locked"`
+		CreatedAt        time.Time   `json:"created-at"`
+		WorkingDirectory string `json:"working-directory"`
+		VCSRepo          struct {
+			Branch string `json:"branch"`
+			ID string `json:"identifier"`
+			TokenID string `json:"oauth-token-id"`
+		} `json:"vcs-repo"`
+		TerraformVersion string      `json:"terraform-version"`
+		Permissions      struct {
+			CanUpdate         bool `json:"can-update"`
+			CanDestroy        bool `json:"can-destroy"`
+			CanQueueDestroy   bool `json:"can-queue-destroy"`
+			CanQueueRun       bool `json:"can-queue-run"`
+			CanUpdateVariable bool `json:"can-update-variable"`
+			CanLock           bool `json:"can-lock"`
+			CanReadSettings   bool `json:"can-read-settings"`
+		} `json:"permissions"`
+		Actions struct {
+			IsDestroyable bool `json:"is-destroyable"`
+		} `json:"actions"`
+	} `json:"attributes"`
+	Relationships struct {
+		Organization struct {
+			Data struct {
+				ID   string `json:"id"`
+				Type string `json:"type"`
+			} `json:"data"`
+		} `json:"organization"`
+		LatestRun struct {
+			Data interface{} `json:"data"`
+		} `json:"latest-run"`
+		CurrentRun struct {
+			Data interface{} `json:"data"`
+		} `json:"current-run"`
+	} `json:"relationships"`
+	Links struct {
+		Self string `json:"self"`
+	} `json:"links"`
+}
+
+func (v *V2WorkspaceData) AttributeByLabel(label string) (string, error) {
+		switch strings.ToLower(label) {
+		case "id":
+			return v.ID, nil
+		case "name":
+			return v.Attributes.Name, nil
+		case "createdat":
+			return v.Attributes.CreatedAt.String(), nil
+		case "environment":
+			return v.Attributes.Environment, nil
+		case "workingdirectory":
+			return v.Attributes.WorkingDirectory, nil
+		case "terraformversion":
+			return v.Attributes.TerraformVersion, nil
+		case "vcsrepo":
+			return v.Attributes.VCSRepo.ID, nil
+		}
+
+		return "", fmt.Errorf("Attribute label not valid: %s", label)
+}
+
+// V2WorkspaceJSON is what is returned by the api when requesting the data for a workspace
+type V2WorkspaceJSON struct {
+	Data V2WorkspaceData `json:"data"`
+}
+
+// AllV2WorkspacesJSON is what is returned by the api when requesting the data for all workspaces
+type AllV2WorkspacesJSON struct {
+	Data []V2WorkspaceData `json:"data"`
 }
 
 // TeamWorkspaceData is what is returned by the api for one team access object for a workspace
@@ -198,7 +227,42 @@ func GetCreateV2VariablePayload(organization, workspaceName string, tfVar TFVar)
 `, tfVar.Key, tfVar.Value, tfVar.Hcl, organization, workspaceName)
 }
 
-func GetV2WorkspaceData(organization, workspaceName, tfToken string) (V2WorkspaceData, error) {
+func GetV2AllWorkspaceData(organization, tfToken string) ([]V2WorkspaceData, error) {
+
+	baseURL := fmt.Sprintf("https://app.terraform.io/api/v2/organizations/%s/workspaces?page%%5Bnumber%%5D=", organization)
+
+	headers := map[string]string{
+		"Authorization": "Bearer " + tfToken,
+		"Content-Type":  "application/vnd.api+json",
+	}
+
+	allWsData := []V2WorkspaceData{}
+
+	for page := 1; ; page++ {
+		url := fmt.Sprintf("%s%d", baseURL, page)
+		resp := CallAPI("GET", url, "", headers)
+
+		defer resp.Body.Close()
+		//bodyBytes, _ := ioutil.ReadAll(resp.Body)
+		//fmt.Println(string(bodyBytes))
+
+		var nextWsData AllV2WorkspacesJSON
+
+		if err := json.NewDecoder(resp.Body).Decode(&nextWsData); err != nil {
+			return []V2WorkspaceData{}, fmt.Errorf("Error getting all workspaces' data for %s:%s\n%s", organization, err.Error())
+		}
+		allWsData = append(allWsData, nextWsData.Data...)
+
+		// If there isn't a whole page of contents, then we're on the last one.
+		if len(nextWsData.Data) < 20 {
+			break
+		}
+	}
+	return allWsData, nil
+}
+
+
+func GetV2WorkspaceData(organization, workspaceName, tfToken string) (V2WorkspaceJSON, error) {
 
 	url := fmt.Sprintf(
 		"https://app.terraform.io/api/v2/organizations/%s/workspaces/%s",
@@ -216,10 +280,10 @@ func GetV2WorkspaceData(organization, workspaceName, tfToken string) (V2Workspac
 	//bodyBytes, _ := ioutil.ReadAll(resp.Body)
 	//fmt.Println(string(bodyBytes))
 
-	var v2WsData V2WorkspaceData
+	var v2WsData V2WorkspaceJSON
 
 	if err := json.NewDecoder(resp.Body).Decode(&v2WsData); err != nil {
-		return V2WorkspaceData{}, fmt.Errorf("Error getting workspace data for %s:%s\n%s",organization, workspaceName, err.Error())
+		return V2WorkspaceJSON{}, fmt.Errorf("Error getting workspace data for %s:%s\n%s",organization, workspaceName, err.Error())
 	}
 
 	return v2WsData, nil
@@ -409,7 +473,7 @@ func CreateV2Workspace(
 	// bodyBytes, _ := ioutil.ReadAll(resp.Body)
 	// fmt.Println(string(bodyBytes))
 
-	var v2WsData V2WorkspaceData
+	var v2WsData V2WorkspaceJSON
 
 	if err := json.NewDecoder(resp.Body).Decode(&v2WsData); err != nil {
 		return "", fmt.Errorf("error getting created workspace data: %s\n", err)

@@ -21,6 +21,7 @@ import (
 	"github.com/spf13/cobra"
 )
 
+var copyState bool
 var copyVariables bool
 var differentDestinationAccount bool
 var organization string
@@ -61,12 +62,13 @@ var cloneCmd = &cobra.Command{
 		}
 
 		config := cloner.V2CloneConfig{
-			Organization: organization,
-			NewOrganization: newOrganization,
-			SourceWorkspace: sourceWorkspace,
-			NewWorkspace: newWorkspace,
-			NewVCSTokenID: newVCSTokenID,
-			CopyVariables: copyVariables,
+			Organization:                organization,
+			NewOrganization:             newOrganization,
+			SourceWorkspace:             sourceWorkspace,
+			NewWorkspace:                newWorkspace,
+			NewVCSTokenID:               newVCSTokenID,
+			CopyState:                   copyState,
+			CopyVariables:               copyVariables,
 			DifferentDestinationAccount: differentDestinationAccount,
 		}
 
@@ -112,6 +114,13 @@ func init() {
 		`The new organization's VCS repo's oauth-token-id`,
 	)
 	cloneCmd.Flags().BoolVarP(
+		&copyState,
+		"copyState",
+		"t",
+		false,
+		`optional (e.g. "-t=true") whether to copy the state of the Source Workspace (only possible if copying to a new account).`,
+	)
+	cloneCmd.Flags().BoolVarP(
 		&copyVariables,
 		"copyVariables",
 		"c",
@@ -128,8 +137,8 @@ func init() {
 }
 
 func runClone(cfg cloner.V2CloneConfig) {
-	fmt.Printf("clone called using %s, %s, %s, copyVariables: %t, differentDestinationAccount: %t\n",
-		cfg.Organization, cfg.SourceWorkspace, cfg.NewWorkspace, cfg.CopyVariables, cfg.DifferentDestinationAccount)
+	fmt.Printf("clone called using %s, %s, %s, copyState: %t, copyVariables: %t, differentDestinationAccount: %t\n",
+		cfg.Organization, cfg.SourceWorkspace, cfg.NewWorkspace, cfg.CopyState, cfg.CopyVariables, cfg.DifferentDestinationAccount)
 	cfg.AtlasToken = atlasToken
 	cfg.AtlasTokenDestination = atlasTokenDestination
 

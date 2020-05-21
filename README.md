@@ -35,7 +35,7 @@ Clone just the workspace (no variables) to the same organization.
 
 ```$ go run main.go clone -o=my-org -s=source-workspace -n=new-workspace```
 
-Clone a workspace and its variables (but not its state) to a different organization in TF Cloud.
+Clone a workspace, its variables and its state to a different organization in TF Cloud.
 
 Note: Sensitive variables will get a placeholder in the new workspace, the value of
 which will need to be corrected manually.  Also, the environment variables from the source
@@ -43,15 +43,9 @@ workspace will need to be moved in the destination workspace from the normal var
 down to the environment variables section (e.g. `CONFIRM_DESTROY`).
 
 ```
-$ go run main.go clone -c=true -o=org1 -p=org2 -d=true \
+$ go run main.go clone -c=true -t=true -o=org1 -p=org2 -d=true \
 $   -s=source-workspace -n=destination-workspace -v=org2-vcs-token
 ```
-
-Note: To copy over the state from one workspace to a clone, see lib/V2Client.RunTFInit
-  for an idea of how you would do that manually using the `terraform init` command. 
-  Remember, it depends on the ATLAS_TOKEN environment variable to be set correctly first
-  for the source organization (before the first `init` run) and then re-set for the 
-  destination organization. 
 
 
 ## Getting a list of all TF Cloud Workspaces with some of their attributes 
@@ -152,6 +146,7 @@ Usage:
   terraform-enterprise-migrator clone [flags]
 
 Flags:
+  -t, --copyState                     optional (e.g. "-t=true") whether to copy the state of the Source Workspace (only possible if copying to a new account).
   -c, --copyVariables                 optional (e.g. "-c=true") whether to copy the values of the Source Workspace variables.
   -d, --differentDestinationAccount   optional (e.g. "-d=true") whether to clone to a different TF account.
   -h, --help                          help for clone

@@ -23,6 +23,7 @@ type V2CloneConfig struct {
 	NewVCSTokenID               string
 	AtlasToken                  string
 	AtlasTokenDestination       string
+	CopyState                   bool
 	CopyVariables               bool
 	DifferentDestinationAccount bool
 }
@@ -517,11 +518,13 @@ func CreateAndPopulateV2Workspace(
 //  - runs terraform init with new version
 // NOTE: This procedure can be used to copy/migrate a workspace's state to a new one.
 //  (see the -backend-config mention below and the backend.tf file in this repo)
-func RunTFInit(mp MigrationPlan, tfToken string) error {
+func RunTFInit(mp MigrationPlan, tfToken, tfTokenDestination string) error {
 	var tfInit string
 	var err error
 	var osCmd *exec.Cmd
 	var stderr bytes.Buffer
+
+	tokenEnv := "ATLAS_TOKEN"
 
 	stateFile := ".terraform"
 
@@ -534,6 +537,10 @@ func RunTFInit(mp MigrationPlan, tfToken string) error {
 		}
 	}
 
+	if err := os.Setenv(tokenEnv, tfToken); err != nil {
+		return fmt.Errorf("Error setting %s environment variable to source value: %s", tokenEnv, err)
+	}
+
 	tfInit = fmt.Sprintf(`-backend-config=name=%s/%s`, mp.LegacyOrg, mp.LegacyName)
 
 	osCmd = exec.Command("terraform", "init", tfInit)
@@ -544,6 +551,10 @@ func RunTFInit(mp MigrationPlan, tfToken string) error {
 		println("Error with Legacy: " + tfInit)
 		fmt.Println(fmt.Sprint(err) + ": " + stderr.String())
 		return err
+	}
+
+	if err := os.Setenv(tokenEnv, tfTokenDestination); err != nil {
+		return fmt.Errorf("Error setting %s environment variable to destination value: %s", tokenEnv, err)
 	}
 
 	// Run tf init with new version
@@ -572,6 +583,10 @@ func RunTFInit(mp MigrationPlan, tfToken string) error {
 		println("Error waiting for new tf init: " + tfInit)
 		fmt.Println(fmt.Sprint(err) + ": " + stderr.String())
 		return err
+	}
+
+	if err := os.Setenv(tokenEnv, tfToken); err != nil {
+		return fmt.Errorf("Error resetting %s environment variable back to source value: %s", tokenEnv, err)
 	}
 
 	return nil
@@ -702,7 +717,7 @@ func CreateAndPopulateAllV2Workspaces(configFile, tfToken, vcsUsername string) (
 
 		completed[migrationPlan.NewName] = sensitiveVars
 
-		err = RunTFInit(migrationPlan, tfToken)
+		err = RunTFInit(migrationPlan, tfToken, tfToken)
 		if err != nil {
 			return completed, err
 		}
@@ -734,6 +749,8 @@ func CloneV2Workspace(cfg V2CloneConfig) ([]string, error) {
 	}
 
 	mp :=  MigrationPlan  {
+		LegacyOrg: cfg.Organization,
+		LegacyName: v2WsData.Data.Attributes.Name,
 		NewOrg: cfg.NewOrganization,
 		NewName: cfg.NewWorkspace,
 		TerraformVersion: v2WsData.Data.Attributes.TerraformVersion,
@@ -772,6 +789,12 @@ func CloneV2Workspace(cfg V2CloneConfig) ([]string, error) {
 	if cfg.DifferentDestinationAccount {
 		CreateV2Workspace(mp, cfg.AtlasTokenDestination, cfg.NewVCSTokenID)
 		CreateAllV2Variables(mp.NewOrg, mp.NewName, cfg.AtlasTokenDestination, tfVars)
+
+		if cfg.CopyState {
+			if err := RunTFInit(mp, cfg.AtlasToken, cfg.AtlasTokenDestination); err != nil {
+				return sensitiveVars, err
+			}
+		}
 
 		return sensitiveVars, nil
 	}

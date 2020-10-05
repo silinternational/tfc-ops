@@ -24,6 +24,7 @@ import (
 )
 
 var keyContains string
+var valueContains string
 
 // variablesCmd represents the list command
 var variablesCmd = &cobra.Command{
@@ -37,12 +38,28 @@ var variablesCmd = &cobra.Command{
 			fmt.Println("")
 			os.Exit(1)
 		}
-		if len(keyContains) == 0 {
-			fmt.Println("Error: The 'key_contains' flag is required")
+		if len(keyContains) == 0 && len(valueContains) == 0 {
+			fmt.Println("Error: Either the 'key_contains' flag or 'value_contains flag must be set")
 			fmt.Println("")
 			os.Exit(1)
 		}
-		println("Getting variables from Terraform with keys containing " + keyContains)
+
+		keyMsg := ""
+		valMsg := ""
+
+		if keyContains != "" {
+			keyMsg = " key containing " + keyContains
+		}
+
+		if valueContains != "" {
+			valMsg = " value containing " + valueContains
+			if keyContains != "" {
+				valMsg = " or value containing " + valueContains
+			}
+		}
+
+		fmt.Printf("Getting variables from Terraform with%s%s\n",
+			keyMsg, valMsg)
 		println()
 		runVariables()
 	},
@@ -54,7 +71,9 @@ func init() {
 	variablesCmd.Flags().StringVarP(&organization, "organization", "o", "",
 		"required - Name of Terraform Enterprise Organization")
 	variablesCmd.Flags().StringVarP(&keyContains, "key_contains", "k", "",
-		"required - string contained in the Terraform variable keys to report on")
+		"required if value_contains is blank - string contained in the Terraform variable keys to report on")
+	variablesCmd.Flags().StringVarP(&valueContains, "value_contains", "v", "",
+		"required if key_contains is blank - string contained in the Terraform variable values to report on")
 }
 
 func runVariables() {
@@ -64,7 +83,7 @@ func runVariables() {
 		return
 	}
 
-	wsVars, err := api.GetAllWorkSpacesVarsFromV2(allData, organization, keyContains, atlasToken)
+	wsVars, err := api.GetAllWorkSpacesVarsFromV2(allData, organization, keyContains, valueContains, atlasToken)
 	if err != nil {
 		println(err.Error())
 		return

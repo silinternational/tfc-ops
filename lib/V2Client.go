@@ -318,7 +318,7 @@ func GetVarsFromV2(organization, workspaceName, tfToken string) ([]V2Var, error)
 	return variables, nil
 }
 
-func GetAllWorkSpacesVarsFromV2(wsData []V2WorkspaceData, organization, keyContains, tfToken string) (map[string][]V2Var, error) {
+func GetAllWorkSpacesVarsFromV2(wsData []V2WorkspaceData, organization, keyContains, valueContains, tfToken string) (map[string][]V2Var, error) {
 	allVars := map[string][]V2Var{}
 
 	for _, ws := range wsData {
@@ -333,7 +333,11 @@ func GetAllWorkSpacesVarsFromV2(wsData []V2WorkspaceData, organization, keyConta
 		wsVars := []V2Var{}
 
 		for _, v := range vars {
-			if strings.Contains(v.Key, keyContains) {
+			if keyContains != "" && strings.Contains(v.Key, keyContains) {
+				wsVars = append(wsVars, v)
+				continue
+			}
+			if valueContains != "" && strings.Contains(v.Value, valueContains) {
 				wsVars = append(wsVars, v)
 			}
 		}

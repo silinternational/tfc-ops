@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"bytes"
 	"encoding/csv"
+	"errors"
 	"fmt"
 	"io"
 	"os"
@@ -14,6 +15,18 @@ import (
 	"text/tabwriter"
 	"time"
 )
+
+type V2UpdateConfig struct {
+	Organization          string
+	NewOrganization       string
+	Workspace             string
+	AtlasToken            string
+	SearchString          string //  must be an exact case-insensitive match (i.e. not a partial match)
+	NewValue              string
+	AddKeyIfNotFound      bool // If true, then SearchOnVariableValue will be treated as false
+	SearchOnVariableValue bool // If false, then will filter on variable key
+	DryRunMode            bool
+}
 
 type V2CloneConfig struct {
 	Organization                string
@@ -39,6 +52,7 @@ type V2Workspace struct {
 
 // V2Var is what is returned by the api for one variable
 type V2Var struct {
+	ID        string `json:"-"`
 	Key       string `json:"key"`
 	Value     string `json:"value"`
 	Sensitive bool   `json:"sensitive"`
@@ -224,6 +238,35 @@ func GetCreateV2VariablePayload(organization, workspaceName string, tfVar TFVar)
 `, tfVar.Key, tfVar.Value, tfVar.Hcl, organization, workspaceName)
 }
 
+// GetUpdateV2VariablePayload returns the json needed to make a Post to the
+// v2 terraform vars api
+func GetUpdateV2VariablePayload(organization, workspaceName, variableID string, tfVar TFVar) string {
+	return fmt.Sprintf(`
+{
+  "data": {
+    "id":"%s",
+    "type":"vars",
+    "attributes": {
+      "key":"%s",
+      "value":"%s",
+      "category":"terraform",
+      "description":"",
+      "hcl":%t,
+      "sensitive":false
+    }
+  },
+  "filter": {
+    "organization": {
+      "name":"%s"
+    },
+    "workspace": {
+      "name":"%s"
+    }
+  }
+}
+`, variableID, tfVar.Key, tfVar.Value, tfVar.Hcl, organization, workspaceName)
+}
+
 func GetV2AllWorkspaceData(organization, tfToken string) ([]V2WorkspaceData, error) {
 
 	baseURL := fmt.Sprintf("https://app.terraform.io/api/v2/organizations/%s/workspaces?page%%5Bnumber%%5D=", organization)
@@ -312,6 +355,7 @@ func GetVarsFromV2(organization, workspaceName, tfToken string) ([]V2Var, error)
 
 	variables := []V2Var{}
 	for _, data := range v2Resp.Data {
+		data.Variable.ID = data.ID // push the ID down into the Variable for future reference
 		variables = append(variables, data.Variable)
 	}
 
@@ -472,6 +516,27 @@ func GetCreateV2WorkspacePayload(mp MigrationPlan, vcsTokenID string) string {
 
 }
   `, mp.NewName, mp.TerraformVersion, mp.Directory, mp.RepoID, vcsTokenID, mp.Branch)
+}
+
+// UpdateV2Variable makes a v2 terraform vars api post to update a variable
+// for a given organization and v2 workspace
+func UpdateV2Variable(organization, workspaceName, variableID, tfToken string, tfVar TFVar) {
+	url := fmt.Sprintf("https://app.terraform.io/api/v2/vars/%s", variableID)
+
+	ConvertHCLVariable(&tfVar)
+
+	patchData := GetUpdateV2VariablePayload(organization, workspaceName, variableID, tfVar)
+
+	headers := map[string]string{
+		"Authorization": "Bearer " + tfToken,
+		"Content-Type":  "application/vnd.api+json",
+	}
+	resp := CallAPI("PATCH", url, patchData, headers)
+
+	defer resp.Body.Close()
+	// bodyBytes, _ := ioutil.ReadAll(resp.Body)
+	// fmt.Println(string(bodyBytes))
+	return
 }
 
 // CreateV2Workspace makes a v2 terraform workspaces api Post to create a
@@ -840,6 +905,63 @@ func CloneV2Workspace(cfg V2CloneConfig) ([]string, error) {
 	AssignTeamAccessOnV2(newV2WsData.Data.ID, cfg.AtlasToken, allTeamData)
 
 	return sensitiveVars, nil
+}
+
+// AddOrUpdateV2Variable adds or updates an existing Terraform Enterprise workspace variable
+// If the copyVariables param is set to true, then all the non-sensitive variable values will be added to the new
+//   workspace.  Otherwise, they will be set to "REPLACE_THIS_VALUE"
+func AddOrUpdateV2Variable(cfg V2UpdateConfig) (string, error) {
+	variables, err := GetVarsFromV2(cfg.Organization, cfg.Workspace, cfg.AtlasToken)
+	if err != nil {
+		return "", err
+	}
+
+	loweredSearchString := strings.ToLower(cfg.SearchString)
+
+	for _, nextVar := range variables {
+		oldValue := nextVar.Value
+		if cfg.SearchOnVariableValue {
+			if strings.ToLower(nextVar.Value) != loweredSearchString {
+				continue
+			}
+			// Found a match
+			tfVar := TFVar{Key: nextVar.Key, Value: cfg.NewValue, Hcl: false}
+			if !cfg.DryRunMode {
+				UpdateV2Variable(cfg.Organization, cfg.Workspace, nextVar.ID, cfg.AtlasToken, tfVar)
+			}
+			return fmt.Sprintf("Replaced the value of %s from %s to %s", nextVar.Key, oldValue, cfg.NewValue), nil
+		}
+
+		// Search on variable key, since search on value is not true
+		if strings.ToLower(nextVar.Key) != loweredSearchString {
+			continue
+		}
+
+		// Found a match
+		// Only add if there isn't a match
+		if cfg.AddKeyIfNotFound {
+			return "", errors.New("addKeyIfNotFound was set to true but a variable already exists with key " + nextVar.Key)
+		}
+
+		tfVar := TFVar{Key: nextVar.Key, Value: cfg.NewValue, Hcl: false}
+
+		if !cfg.DryRunMode {
+			UpdateV2Variable(cfg.Organization, cfg.Workspace, nextVar.ID, cfg.AtlasToken, tfVar)
+		}
+		return fmt.Sprintf("Replaced the value of %s from %s to %s", nextVar.Key, oldValue, cfg.NewValue), nil
+	}
+
+	// At this point, we haven't found a match
+	if cfg.AddKeyIfNotFound {
+		tfVar := TFVar{Key: cfg.SearchString, Value: cfg.NewValue, Hcl: false}
+
+		if !cfg.DryRunMode {
+			CreateV2Variable(cfg.Organization, cfg.Workspace, cfg.AtlasToken, tfVar)
+		}
+		return fmt.Sprintf("Added variable %s = %s", cfg.SearchString, cfg.NewValue), nil
+	}
+
+	return "No match found and no variable added", nil
 }
 
 type OAuthTokens struct {

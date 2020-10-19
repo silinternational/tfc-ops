@@ -14,6 +14,7 @@ var variableSearchString string
 var newVariableValue string
 var searchOnVariableValue bool
 var addKeyIfNotFound bool
+var dryRunMode bool
 
 // cloneCmd represents the clone command
 var updateCmd = &cobra.Command{
@@ -51,6 +52,7 @@ var updateCmd = &cobra.Command{
 			NewValue:              newVariableValue,
 			SearchOnVariableValue: searchOnVariableValue,
 			AddKeyIfNotFound:      addKeyIfNotFound,
+			DryRunMode:            dryRunMode,
 		}
 
 		runUpdateVariable(config)
@@ -101,6 +103,13 @@ func init() {
 		false,
 		`optional (e.g. "-v=true") whether to do the search based on the value of the variables. (Must be false if add-key-if-not-found is true`,
 	)
+	updateCmd.Flags().BoolVarP(
+		&dryRunMode,
+		"dry-run-mode",
+		"d",
+		false,
+		`optional (e.g. "-d=true") dry run mode only.`,
+	)
 }
 
 func runUpdateVariable(cfg updater.V2UpdateConfig) {
@@ -112,6 +121,9 @@ func runUpdateVariable(cfg updater.V2UpdateConfig) {
 		cfg.SearchOnVariableValue = false
 	}
 
+	if cfg.DryRunMode {
+		println("\n ****  DRY RUN MODE  ****")
+	}
 	fmt.Printf("update variable called using %s, %s, search string: %s, new value: %s, add-key-if-not-found: %t, search-on-variable-value: %t\n",
 		cfg.Organization, cfg.Workspace, cfg.SearchString, cfg.NewValue, cfg.AddKeyIfNotFound, cfg.SearchOnVariableValue)
 	cfg.AtlasToken = atlasToken

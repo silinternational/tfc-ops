@@ -25,6 +25,7 @@ type V2UpdateConfig struct {
 	NewValue              string
 	AddKeyIfNotFound      bool // If true, then SearchOnVariableValue will be treated as false
 	SearchOnVariableValue bool // If false, then will filter on variable key
+	DryRunMode            bool
 }
 
 type V2CloneConfig struct {
@@ -896,7 +897,9 @@ func AddOrUpdateV2Variable(cfg V2UpdateConfig) (string, error) {
 			}
 			// Found a match
 			tfVar := TFVar{Key: nextVar.Key, Value: cfg.NewValue, Hcl: false}
-			UpdateV2Variable(cfg.Organization, cfg.Workspace, nextVar.ID, cfg.AtlasToken, tfVar)
+			if !cfg.DryRunMode {
+				UpdateV2Variable(cfg.Organization, cfg.Workspace, nextVar.ID, cfg.AtlasToken, tfVar)
+			}
 			return fmt.Sprintf("Replaced the value of %s from %s to %s", nextVar.Key, oldValue, cfg.NewValue), nil
 		}
 
@@ -912,14 +915,20 @@ func AddOrUpdateV2Variable(cfg V2UpdateConfig) (string, error) {
 		}
 
 		tfVar := TFVar{Key: nextVar.Key, Value: cfg.NewValue, Hcl: false}
-		UpdateV2Variable(cfg.Organization, cfg.Workspace, nextVar.ID, cfg.AtlasToken, tfVar)
+
+		if !cfg.DryRunMode {
+			UpdateV2Variable(cfg.Organization, cfg.Workspace, nextVar.ID, cfg.AtlasToken, tfVar)
+		}
 		return fmt.Sprintf("Replaced the value of %s from %s to %s", nextVar.Key, oldValue, cfg.NewValue), nil
 	}
 
 	// At this point, we haven't found a match
 	if cfg.AddKeyIfNotFound {
 		tfVar := TFVar{Key: cfg.SearchString, Value: cfg.NewValue, Hcl: false}
-		CreateV2Variable(cfg.Organization, cfg.Workspace, cfg.AtlasToken, tfVar)
+
+		if !cfg.DryRunMode {
+			CreateV2Variable(cfg.Organization, cfg.Workspace, cfg.AtlasToken, tfVar)
+		}
 		return fmt.Sprintf("Added variable %s = %s", cfg.SearchString, cfg.NewValue), nil
 	}
 

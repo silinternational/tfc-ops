@@ -30,7 +30,7 @@ var valueContains string
 var variablesCmd = &cobra.Command{
 	Use:   "variables",
 	Short: "Report on variables",
-	Long:  `Show the values of variables with a key containing a certain string`,
+	Long:  `Show the values of variables with a key or value containing a certain string`,
 	Args:  cobra.ExactArgs(0),
 	Run: func(cmd *cobra.Command, args []string) {
 		if organization == "" {

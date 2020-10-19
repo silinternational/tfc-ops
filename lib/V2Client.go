@@ -4,16 +4,28 @@ import (
 	"bufio"
 	"bytes"
 	"encoding/csv"
+	"errors"
 	"fmt"
 	"io"
 	"os"
 	"os/exec"
 	"strings"
 	//"io/ioutil"
-	"time"
 	"encoding/json"
 	"text/tabwriter"
+	"time"
 )
+
+type V2UpdateConfig struct {
+	Organization          string
+	NewOrganization       string
+	Workspace             string
+	AtlasToken            string
+	SearchString          string //  must be an exact case-insensitive match (i.e. not a partial match)
+	NewValue              string
+	AddKeyIfNotFound      bool // If true, then SearchOnVariableValue will be treated as false
+	SearchOnVariableValue bool // If false, then will filter on variable key
+}
 
 type V2CloneConfig struct {
 	Organization                string
@@ -37,9 +49,9 @@ type V2Workspace struct {
 	TFWorkingDir string
 }
 
-
 // V2Var is what is returned by the api for one variable
 type V2Var struct {
+	ID        string `json:"-"`
 	Key       string `json:"key"`
 	Value     string `json:"value"`
 	Sensitive bool   `json:"sensitive"`
@@ -47,13 +59,12 @@ type V2Var struct {
 	Hcl       bool   `json:"hcl"`
 }
 
-
 // V2VarsResponse is what is returned by the api when requesting the variables of a workspace
 type V2VarsResponse struct {
 	Data []struct {
-		ID         string `json:"id"`
-		Type       string `json:"type"`
-		Variable   V2Var `json:"attributes"`
+		ID            string `json:"id"`
+		Type          string `json:"type"`
+		Variable      V2Var  `json:"attributes"`
 		Relationships struct {
 			Configurable struct {
 				Data struct {
@@ -76,18 +87,18 @@ type V2WorkspaceData struct {
 	ID         string `json:"id"`
 	Type       string `json:"type"`
 	Attributes struct {
-		Name             string      `json:"name"`
-		Environment      string      `json:"environment"`
-		AutoApply        bool        `json:"auto-apply"`
-		Locked           bool        `json:"locked"`
-		CreatedAt        time.Time   `json:"created-at"`
-		WorkingDirectory string `json:"working-directory"`
+		Name             string    `json:"name"`
+		Environment      string    `json:"environment"`
+		AutoApply        bool      `json:"auto-apply"`
+		Locked           bool      `json:"locked"`
+		CreatedAt        time.Time `json:"created-at"`
+		WorkingDirectory string    `json:"working-directory"`
 		VCSRepo          struct {
-			Branch string `json:"branch"`
-			ID string `json:"identifier"`
+			Branch  string `json:"branch"`
+			ID      string `json:"identifier"`
 			TokenID string `json:"oauth-token-id"`
 		} `json:"vcs-repo"`
-		TerraformVersion string      `json:"terraform-version"`
+		TerraformVersion string `json:"terraform-version"`
 		Permissions      struct {
 			CanUpdate         bool `json:"can-update"`
 			CanDestroy        bool `json:"can-destroy"`
@@ -121,24 +132,24 @@ type V2WorkspaceData struct {
 }
 
 func (v *V2WorkspaceData) AttributeByLabel(label string) (string, error) {
-		switch strings.ToLower(label) {
-		case "id":
-			return v.ID, nil
-		case "name":
-			return v.Attributes.Name, nil
-		case "createdat":
-			return v.Attributes.CreatedAt.String(), nil
-		case "environment":
-			return v.Attributes.Environment, nil
-		case "workingdirectory":
-			return v.Attributes.WorkingDirectory, nil
-		case "terraformversion":
-			return v.Attributes.TerraformVersion, nil
-		case "vcsrepo":
-			return v.Attributes.VCSRepo.ID, nil
-		}
+	switch strings.ToLower(label) {
+	case "id":
+		return v.ID, nil
+	case "name":
+		return v.Attributes.Name, nil
+	case "createdat":
+		return v.Attributes.CreatedAt.String(), nil
+	case "environment":
+		return v.Attributes.Environment, nil
+	case "workingdirectory":
+		return v.Attributes.WorkingDirectory, nil
+	case "terraformversion":
+		return v.Attributes.TerraformVersion, nil
+	case "vcsrepo":
+		return v.Attributes.VCSRepo.ID, nil
+	}
 
-		return "", fmt.Errorf("Attribute label not valid: %s", label)
+	return "", fmt.Errorf("Attribute label not valid: %s", label)
 }
 
 // V2WorkspaceJSON is what is returned by the api when requesting the data for a workspace
@@ -183,12 +194,10 @@ type TeamWorkspaceData struct {
 	} `json:"links"`
 }
 
-
 // AllTeamWorkspaceData is what is returned by the api when requesting the team access data for a workspace
 type AllTeamWorkspaceData struct {
 	Data []TeamWorkspaceData `json:"data"`
 }
-
 
 // ConvertHCLVariable changes a TFVar struct in place by escaping
 //  the double quotes and line endings in the Value attribute
@@ -228,6 +237,35 @@ func GetCreateV2VariablePayload(organization, workspaceName string, tfVar TFVar)
 `, tfVar.Key, tfVar.Value, tfVar.Hcl, organization, workspaceName)
 }
 
+// GetUpdateV2VariablePayload returns the json needed to make a Post to the
+// v2 terraform vars api
+func GetUpdateV2VariablePayload(organization, workspaceName, variableID string, tfVar TFVar) string {
+	return fmt.Sprintf(`
+{
+  "data": {
+    "id":"%s",
+    "type":"vars",
+    "attributes": {
+      "key":"%s",
+      "value":"%s",
+      "category":"terraform",
+      "description":"",
+      "hcl":%t,
+      "sensitive":false
+    }
+  },
+  "filter": {
+    "organization": {
+      "name":"%s"
+    },
+    "workspace": {
+      "name":"%s"
+    }
+  }
+}
+`, variableID, tfVar.Key, tfVar.Value, tfVar.Hcl, organization, workspaceName)
+}
+
 func GetV2AllWorkspaceData(organization, tfToken string) ([]V2WorkspaceData, error) {
 
 	baseURL := fmt.Sprintf("https://app.terraform.io/api/v2/organizations/%s/workspaces?page%%5Bnumber%%5D=", organization)
@@ -262,7 +300,6 @@ func GetV2AllWorkspaceData(organization, tfToken string) ([]V2WorkspaceData, err
 	return allWsData, nil
 }
 
-
 func GetV2WorkspaceData(organization, workspaceName, tfToken string) (V2WorkspaceJSON, error) {
 
 	url := fmt.Sprintf(
@@ -284,7 +321,7 @@ func GetV2WorkspaceData(organization, workspaceName, tfToken string) (V2Workspac
 	var v2WsData V2WorkspaceJSON
 
 	if err := json.NewDecoder(resp.Body).Decode(&v2WsData); err != nil {
-		return V2WorkspaceJSON{}, fmt.Errorf("Error getting workspace data for %s:%s\n%s",organization, workspaceName, err.Error())
+		return V2WorkspaceJSON{}, fmt.Errorf("Error getting workspace data for %s:%s\n%s", organization, workspaceName, err.Error())
 	}
 
 	return v2WsData, nil
@@ -317,6 +354,7 @@ func GetVarsFromV2(organization, workspaceName, tfToken string) ([]V2Var, error)
 
 	variables := []V2Var{}
 	for _, data := range v2Resp.Data {
+		data.Variable.ID = data.ID // push the ID down into the Variable for future reference
 		variables = append(variables, data.Variable)
 	}
 
@@ -347,7 +385,6 @@ func GetTeamAccessFromV2(workspaceID, tfToken string) (AllTeamWorkspaceData, err
 
 	return allTeamData, nil
 }
-
 
 func getAssignTeamAccessPayload(accessLevel, workspaceID, teamID string) string {
 	return fmt.Sprintf(`
@@ -390,7 +427,7 @@ func AssignTeamAccessOnV2(workspaceID, tfToken string, allTeamData AllTeamWorksp
 			teamData.Attributes.Access,
 			workspaceID,
 			teamData.Relationships.Team.Data.ID,
-	)
+		)
 
 		resp := CallAPI("POST", url, postData, headers)
 		defer resp.Body.Close()
@@ -451,12 +488,33 @@ func GetCreateV2WorkspacePayload(mp MigrationPlan, vcsTokenID string) string {
   `, mp.NewName, mp.TerraformVersion, mp.Directory, mp.RepoID, vcsTokenID, mp.Branch)
 }
 
+// UpdateV2Variable makes a v2 terraform vars api post to update a variable
+// for a given organization and v2 workspace
+func UpdateV2Variable(organization, workspaceName, variableID, tfToken string, tfVar TFVar) {
+	url := fmt.Sprintf("https://app.terraform.io/api/v2/vars/%s", variableID)
+
+	ConvertHCLVariable(&tfVar)
+
+	patchData := GetUpdateV2VariablePayload(organization, workspaceName, variableID, tfVar)
+
+	headers := map[string]string{
+		"Authorization": "Bearer " + tfToken,
+		"Content-Type":  "application/vnd.api+json",
+	}
+	resp := CallAPI("PATCH", url, patchData, headers)
+
+	defer resp.Body.Close()
+	// bodyBytes, _ := ioutil.ReadAll(resp.Body)
+	// fmt.Println(string(bodyBytes))
+	return
+}
+
 // CreateV2Workspace makes a v2 terraform workspaces api Post to create a
 // workspace for a given organization, including setting up its vcs repo integration
 func CreateV2Workspace(
 	mp MigrationPlan,
 	tfToken, vcsTokenID string,
-)  (string, error) {
+) (string, error) {
 	url := fmt.Sprintf(
 		"https://app.terraform.io/api/v2/organizations/%s/workspaces",
 		mp.NewOrg,
@@ -743,20 +801,20 @@ func CloneV2Workspace(cfg V2CloneConfig) ([]string, error) {
 		return []string{}, err
 	}
 
-	if ! cfg.DifferentDestinationAccount {
+	if !cfg.DifferentDestinationAccount {
 		cfg.NewOrganization = cfg.Organization
 		cfg.NewVCSTokenID = v2WsData.Data.Attributes.VCSRepo.ID
 	}
 
-	mp :=  MigrationPlan  {
-		LegacyOrg: cfg.Organization,
-		LegacyName: v2WsData.Data.Attributes.Name,
-		NewOrg: cfg.NewOrganization,
-		NewName: cfg.NewWorkspace,
+	mp := MigrationPlan{
+		LegacyOrg:        cfg.Organization,
+		LegacyName:       v2WsData.Data.Attributes.Name,
+		NewOrg:           cfg.NewOrganization,
+		NewName:          cfg.NewWorkspace,
 		TerraformVersion: v2WsData.Data.Attributes.TerraformVersion,
-		RepoID: v2WsData.Data.Attributes.VCSRepo.ID,
-		Branch: v2WsData.Data.Attributes.VCSRepo.Branch,
-		Directory: v2WsData.Data.Attributes.WorkingDirectory,
+		RepoID:           v2WsData.Data.Attributes.VCSRepo.ID,
+		Branch:           v2WsData.Data.Attributes.VCSRepo.Branch,
+		Directory:        v2WsData.Data.Attributes.WorkingDirectory,
 	}
 
 	sensitiveVars := []string{}
@@ -819,6 +877,55 @@ func CloneV2Workspace(cfg V2CloneConfig) ([]string, error) {
 	return sensitiveVars, nil
 }
 
+// AddOrUpdateV2Variable adds or updates an existing Terraform Enterprise workspace variable
+// If the copyVariables param is set to true, then all the non-sensitive variable values will be added to the new
+//   workspace.  Otherwise, they will be set to "REPLACE_THIS_VALUE"
+func AddOrUpdateV2Variable(cfg V2UpdateConfig) (string, error) {
+	variables, err := GetVarsFromV2(cfg.Organization, cfg.Workspace, cfg.AtlasToken)
+	if err != nil {
+		return "", err
+	}
+
+	loweredSearchString := strings.ToLower(cfg.SearchString)
+
+	for _, nextVar := range variables {
+		oldValue := nextVar.Value
+		if cfg.SearchOnVariableValue {
+			if strings.ToLower(nextVar.Value) != loweredSearchString {
+				continue
+			}
+			// Found a match
+			tfVar := TFVar{Key: nextVar.Key, Value: cfg.NewValue, Hcl: false}
+			UpdateV2Variable(cfg.Organization, cfg.Workspace, nextVar.ID, cfg.AtlasToken, tfVar)
+			return fmt.Sprintf("Replaced the value of %s from %s to %s", nextVar.Key, oldValue, cfg.NewValue), nil
+		}
+
+		// Search on variable key, since search on value is not true
+		if strings.ToLower(nextVar.Key) != loweredSearchString {
+			continue
+		}
+
+		// Found a match
+		// Only add if there isn't a match
+		if cfg.AddKeyIfNotFound {
+			return "", errors.New("addKeyIfNotFound was set to true but a variable already exists with key " + nextVar.Key)
+		}
+
+		tfVar := TFVar{Key: nextVar.Key, Value: cfg.NewValue, Hcl: false}
+		UpdateV2Variable(cfg.Organization, cfg.Workspace, nextVar.ID, cfg.AtlasToken, tfVar)
+		return fmt.Sprintf("Replaced the value of %s from %s to %s", nextVar.Key, oldValue, cfg.NewValue), nil
+	}
+
+	// At this point, we haven't found a match
+	if cfg.AddKeyIfNotFound {
+		tfVar := TFVar{Key: cfg.SearchString, Value: cfg.NewValue, Hcl: false}
+		CreateV2Variable(cfg.Organization, cfg.Workspace, cfg.AtlasToken, tfVar)
+		return fmt.Sprintf("Added variable %s = %s", cfg.SearchString, cfg.NewValue), nil
+	}
+
+	return "No match found and no variable added", nil
+}
+
 type OAuthTokens struct {
 	Data []struct {
 		ID         string `json:"id"`
@@ -844,7 +951,6 @@ type OAuthTokens struct {
 		} `json:"links"`
 	} `json:"data"`
 }
-
 
 func getVCSToken(vcsUsername, orgName, tfToken string) (string, error) {
 	url := fmt.Sprintf("https://app.terraform.io/api/v2/organizations/%s/oauth-tokens", orgName)

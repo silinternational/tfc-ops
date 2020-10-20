@@ -362,6 +362,35 @@ func GetVarsFromV2(organization, workspaceName, tfToken string) ([]V2Var, error)
 	return variables, nil
 }
 
+func GetAllWorkSpacesVarsFromV2(wsData []V2WorkspaceData, organization, keyContains, valueContains, tfToken string) (map[string][]V2Var, error) {
+	allVars := map[string][]V2Var{}
+
+	for _, ws := range wsData {
+		wsName := ws.Attributes.Name
+
+		vars, err := GetVarsFromV2(organization, wsName, tfToken)
+		if err != nil {
+			err := fmt.Errorf("Error getting variables for %s:%s\n%s", organization, wsName, err.Error())
+			return map[string][]V2Var{}, err
+		}
+
+		wsVars := []V2Var{}
+
+		for _, v := range vars {
+			if keyContains != "" && strings.Contains(v.Key, keyContains) {
+				wsVars = append(wsVars, v)
+				continue
+			}
+			if valueContains != "" && strings.Contains(v.Value, valueContains) {
+				wsVars = append(wsVars, v)
+			}
+		}
+		allVars[wsName] = wsVars
+	}
+
+	return allVars, nil
+}
+
 // GetTeamAccessFromV2 returns the team access data from an existing workspace
 func GetTeamAccessFromV2(workspaceID, tfToken string) (AllTeamWorkspaceData, error) {
 	url := fmt.Sprintf(

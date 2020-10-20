@@ -97,9 +97,13 @@ Usage:
   terraform-enterprise-migrator [command]
 
 Available Commands:
+  clone       Clone a V2 Workspace
   help        Help about any command
+  list        List Workspaces
   migrate     Perform migration plan
   plan        Generate migration plan file
+  update      Update/add a variable in a V2 Workspace
+  variables   Report on variables
 
 Flags:
   -h, --help   help for terraform-enterprise-migrator
@@ -169,6 +173,41 @@ Flags:
   -a, --attributes string     required - Workspace attributes to list: id,name,createdat,environment,workingdirectory,terraformversion,vcsrepo
   -h, --help                  help for list
   -o, --organization string   required - Name of Terraform Enterprise Organization
+```
+
+
+### Update Help
+```text
+$ terraform-enterprise-migrator update -h
+Update or add a variable in a TF Enterprise Version 2 Workspace based on a complete case-insensitive match
+
+Usage:
+  terraform-enterprise-migrator update [flags]
+
+Flags:
+  -a, --add-key-if-not-found            optional (e.g. "-a=true") whether to add a new variable if a matching key is not found.
+  -d, --dry-run-mode                    optional (e.g. "-d=true") dry run mode only.
+  -h, --help                            help for update
+  -n, --new-variable-value string       The desired new value of the variable
+  -o, --organization string             Name of the Organization in TF Enterprise (version 2)
+  -v, --search-on-variable-value        optional (e.g. "-v=true") whether to do the search based on the value of the variables. (Must be false if add-key-if-not-found is true
+  -s, --variable-search-string string   The string to match in the current variables (either in the Key or Value - see other flags)
+  -w, --workspace string                Name of the Workspace in TF Enterprise (version 2)
+```
+
+### Variables Help
+```text
+$ terraform-enterprise-migrator variables -h
+Show the values of variables with a key or value containing a certain string
+
+Usage:
+  terraform-enterprise-migrator variables [flags]
+
+Flags:
+  -h, --help                    help for variables
+  -k, --key_contains string     required if value_contains is blank - string contained in the Terraform variable keys to report on
+  -o, --organization string     required - Name of Terraform Enterprise Organization
+  -v, --value_contains string   required if key_contains is blank - string contained in the Terraform variable values to report on
 ```
 
 ## License

@@ -15,6 +15,7 @@ var newVariableValue string
 var searchOnVariableValue bool
 var addKeyIfNotFound bool
 var dryRunMode bool
+var sensitiveVariable bool
 
 // cloneCmd represents the clone command
 var updateCmd = &cobra.Command{
@@ -53,6 +54,7 @@ var updateCmd = &cobra.Command{
 			SearchOnVariableValue: searchOnVariableValue,
 			AddKeyIfNotFound:      addKeyIfNotFound,
 			DryRunMode:            dryRunMode,
+			SensitiveVariable:     sensitiveVariable,
 		}
 
 		runUpdateVariable(config)
@@ -109,6 +111,13 @@ func init() {
 		"d",
 		false,
 		`optional (e.g. "-d=true") dry run mode only.`,
+	)
+	updateCmd.Flags().BoolVarP(
+		&sensitiveVariable,
+		"sensitive-variable",
+		"x",
+		false,
+		`optional (e.g. "-x=true") make the variable sensitive.`,
 	)
 }
 

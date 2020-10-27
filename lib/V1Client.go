@@ -31,9 +31,10 @@ type TFAllStates struct {
 
 // TFVar matches the attributes of a terraform environment/workspace's variable
 type TFVar struct {
-	Key   string `json:"key"`
-	Value string `json:"value"`
-	Hcl   bool   `json:"hcl"`
+	Key       string `json:"key"`
+	Value     string `json:"value"`
+	Hcl       bool   `json:"hcl"`
+	Sensitive bool   `json:"sensitive"`
 }
 
 // TFConfig matches the json return value of the v1 terraform configurations api

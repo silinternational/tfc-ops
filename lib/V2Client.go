@@ -26,6 +26,7 @@ type V2UpdateConfig struct {
 	AddKeyIfNotFound      bool // If true, then SearchOnVariableValue will be treated as false
 	SearchOnVariableValue bool // If false, then will filter on variable key
 	DryRunMode            bool
+	SensitiveVariable     bool // Whether to mark the variable as sensitive
 }
 
 type V2CloneConfig struct {
@@ -223,7 +224,7 @@ func GetCreateV2VariablePayload(organization, workspaceName string, tfVar TFVar)
       "value":"%s",
       "category":"terraform",
       "hcl":%t,
-      "sensitive":false
+      "sensitive":%t
     }
   },
   "filter": {
@@ -235,7 +236,7 @@ func GetCreateV2VariablePayload(organization, workspaceName string, tfVar TFVar)
     }
   }
 }
-`, tfVar.Key, tfVar.Value, tfVar.Hcl, organization, workspaceName)
+`, tfVar.Key, tfVar.Value, tfVar.Hcl, tfVar.Sensitive, organization, workspaceName)
 }
 
 // GetUpdateV2VariablePayload returns the json needed to make a Post to the
@@ -252,7 +253,7 @@ func GetUpdateV2VariablePayload(organization, workspaceName, variableID string, 
       "category":"terraform",
       "description":"",
       "hcl":%t,
-      "sensitive":false
+      "sensitive":%t
     }
   },
   "filter": {
@@ -264,7 +265,7 @@ func GetUpdateV2VariablePayload(organization, workspaceName, variableID string, 
     }
   }
 }
-`, variableID, tfVar.Key, tfVar.Value, tfVar.Hcl, organization, workspaceName)
+`, variableID, tfVar.Key, tfVar.Value, tfVar.Hcl, tfVar.Sensitive, organization, workspaceName)
 }
 
 func GetV2AllWorkspaceData(organization, tfToken string) ([]V2WorkspaceData, error) {
@@ -925,7 +926,7 @@ func AddOrUpdateV2Variable(cfg V2UpdateConfig) (string, error) {
 				continue
 			}
 			// Found a match
-			tfVar := TFVar{Key: nextVar.Key, Value: cfg.NewValue, Hcl: false}
+			tfVar := TFVar{Key: nextVar.Key, Value: cfg.NewValue, Hcl: false, Sensitive: cfg.SensitiveVariable}
 			if !cfg.DryRunMode {
 				UpdateV2Variable(cfg.Organization, cfg.Workspace, nextVar.ID, cfg.AtlasToken, tfVar)
 			}
@@ -943,7 +944,7 @@ func AddOrUpdateV2Variable(cfg V2UpdateConfig) (string, error) {
 			return "", errors.New("addKeyIfNotFound was set to true but a variable already exists with key " + nextVar.Key)
 		}
 
-		tfVar := TFVar{Key: nextVar.Key, Value: cfg.NewValue, Hcl: false}
+		tfVar := TFVar{Key: nextVar.Key, Value: cfg.NewValue, Hcl: false, Sensitive: cfg.SensitiveVariable}
 
 		if !cfg.DryRunMode {
 			UpdateV2Variable(cfg.Organization, cfg.Workspace, nextVar.ID, cfg.AtlasToken, tfVar)
@@ -953,7 +954,7 @@ func AddOrUpdateV2Variable(cfg V2UpdateConfig) (string, error) {
 
 	// At this point, we haven't found a match
 	if cfg.AddKeyIfNotFound {
-		tfVar := TFVar{Key: cfg.SearchString, Value: cfg.NewValue, Hcl: false}
+		tfVar := TFVar{Key: cfg.SearchString, Value: cfg.NewValue, Hcl: false, Sensitive: cfg.SensitiveVariable}
 
 		if !cfg.DryRunMode {
 			CreateV2Variable(cfg.Organization, cfg.Workspace, cfg.AtlasToken, tfVar)

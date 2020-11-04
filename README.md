@@ -21,7 +21,7 @@ https://app.terraform.io/app/settings/tokens and generating a new token.
 There are three ways to download/install this script:
 
 1. Download a pre-built binary for your operating system by going to [/dist](https://github.com/silinternational/terraform-enterprise-migrator/tree/master/dist)
-2. If you're a Go developer you can install it by running `go get -u https://github.com/silinternationa/terraform-enterprise-migrator`
+2. If you're a Go developer you can install it by running `go get -u github.com/silinternationa/terraform-enterprise-migrator`
 3. If you're a Go developer and want to modify the source before running, clone this repo and run with `go run main.go ...`
 
 ## Cloning a TF Cloud Workspace

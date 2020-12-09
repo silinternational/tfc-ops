@@ -76,8 +76,7 @@ func init() {
 	atlasTokenDestination = os.Getenv("ATLAS_TOKEN_DESTINATION")
 	if atlasTokenDestination == "" {
 		atlasTokenDestination = atlasToken
-		fmt.Println("Info: Environment variable for ATLAS_TOKEN_DESTINATION is not set.")
-		fmt.Println("      Using ATLAS_TOKEN for destination account as well.\n")
+		fmt.Println("Info: ATLAS_TOKEN_DESTINATION is not set, Using ATLAS_TOKEN for destination account.\n")
 	}
 
 }

@@ -67,15 +67,16 @@ func runList() {
 	allAttrs := strings.Split(attributes, ",")
 
 	for _, ws := range allData {
-		for _, a := range allAttrs {
+		values := make([]string, len(allAttrs))
+		for i, a := range allAttrs {
 			value, err := ws.AttributeByLabel(strings.Trim(a, " "))
 			if err != nil {
 				println("\n", err.Error())
 				return
 			}
-			print(value, ", ")
+			values[i] = value
 		}
 
-		println()
+		println(strings.Join(values, ", "))
 	}
 }

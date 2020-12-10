@@ -31,8 +31,8 @@ var atlasTokenDestination string
 var rootCmd = &cobra.Command{
 	Use:   "terraform-enterprise-migrator",
 	Short: "Migration script for moving environments from Terraform Enterprise (Legacy) to Terraform Enterprise",
-	Long: `Migration is a three step process. First run plan, modify the generated file as needed, 
-then run migrate to process the plan file. \n Alternatively, you can clone a V2 workspace.`,
+	Long: `Migration is a three step process. First run plan, modify the generated file as needed, then run migrate to process the plan file.
+Alternatively, you can clone a V2 workspace.`,
 	// Uncomment the following line if your bare application
 	// has an action associated with it:
 	//	Run: func(cmd *cobra.Command, args []string) { },
@@ -76,8 +76,7 @@ func init() {
 	atlasTokenDestination = os.Getenv("ATLAS_TOKEN_DESTINATION")
 	if atlasTokenDestination == "" {
 		atlasTokenDestination = atlasToken
-		fmt.Println("Info: Environment variable for ATLAS_TOKEN_DESTINATION is not set.")
-		fmt.Println("      Using ATLAS_TOKEN for destination account as well.\n")
+		fmt.Println("Info: ATLAS_TOKEN_DESTINATION is not set, Using ATLAS_TOKEN for destination account.\n")
 	}
 
 }

@@ -208,6 +208,7 @@ Flags:
   -k, --key_contains string     required if value_contains is blank - string contained in the Terraform variable keys to report on
   -o, --organization string     required - Name of Terraform Enterprise Organization
   -v, --value_contains string   required if key_contains is blank - string contained in the Terraform variable values to report on
+  -w, --workspace string        Name of the Workspace in TF Enterprise
 ```
 
 ## License

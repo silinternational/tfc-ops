@@ -369,27 +369,37 @@ func GetAllWorkSpacesVarsFromV2(wsData []V2WorkspaceData, organization, keyConta
 	for _, ws := range wsData {
 		wsName := ws.Attributes.Name
 
-		vars, err := GetVarsFromV2(organization, wsName, tfToken)
+		wsVars, err := GetMatchingVarsFromV2(organization, wsName, tfToken, keyContains, valueContains)
 		if err != nil {
-			err := fmt.Errorf("Error getting variables for %s:%s\n%s", organization, wsName, err.Error())
-			return map[string][]V2Var{}, err
-		}
-
-		wsVars := []V2Var{}
-
-		for _, v := range vars {
-			if keyContains != "" && strings.Contains(v.Key, keyContains) {
-				wsVars = append(wsVars, v)
-				continue
-			}
-			if valueContains != "" && strings.Contains(v.Value, valueContains) {
-				wsVars = append(wsVars, v)
-			}
+			return nil, err
 		}
 		allVars[wsName] = wsVars
 	}
 
 	return allVars, nil
+}
+
+func GetMatchingVarsFromV2(organization string, wsName string, tfToken string, keyContains string, valueContains string) ([]V2Var, error) {
+
+	vars, err := GetVarsFromV2(organization, wsName, tfToken)
+	if err != nil {
+		err := fmt.Errorf("Error getting variables for %s:%s\n%s", organization, wsName, err.Error())
+		return []V2Var{}, err
+	}
+
+	var wsVars []V2Var
+
+	for _, v := range vars {
+		if keyContains != "" && strings.Contains(v.Key, keyContains) {
+			wsVars = append(wsVars, v)
+			continue
+		}
+		if valueContains != "" && strings.Contains(v.Value, valueContains) {
+			wsVars = append(wsVars, v)
+		}
+	}
+
+	return wsVars, nil
 }
 
 // GetTeamAccessFromV2 returns the team access data from an existing workspace

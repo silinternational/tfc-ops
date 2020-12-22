@@ -58,9 +58,11 @@ var variablesCmd = &cobra.Command{
 			}
 		}
 
-		fmt.Printf("Getting variables from Terraform with%s%s\n",
-			keyMsg, valMsg)
-		println()
+		wsMsg := workspace
+		if wsMsg == "" {
+			wsMsg = "all workspaces"
+		}
+		fmt.Printf("Getting variables from %s with%s%s\n\n", wsMsg, keyMsg, valMsg)
 		runVariables()
 	},
 }
@@ -74,9 +76,21 @@ func init() {
 		"required if value_contains is blank - string contained in the Terraform variable keys to report on")
 	variablesCmd.Flags().StringVarP(&valueContains, "value_contains", "v", "",
 		"required if key_contains is blank - string contained in the Terraform variable values to report on")
+	variablesCmd.Flags().StringVarP(&workspace, "workspace", "w", "",
+		`Name of the Workspace in TF Enterprise`,
+	)
 }
 
 func runVariables() {
+	if workspace != "" {
+		vars, err := api.GetMatchingVarsFromV2(organization, workspace, atlasToken, keyContains, valueContains)
+		if err != nil {
+			println(err.Error())
+			return
+		}
+		printWorkspaceVars(workspace, vars)
+		return
+	}
 	allData, err := api.GetV2AllWorkspaceData(organization, atlasToken)
 	if err != nil {
 		println(err.Error())
@@ -89,24 +103,26 @@ func runVariables() {
 		return
 	}
 
-	indent := "   "
-
 	for ws, vs := range wsVars {
-		if len(vs) == 0 {
-			fmt.Printf("%s has no matching variables\n\n", ws)
-			continue
-		}
-
-		fmt.Printf("%s has %v matching variables ...\n", ws, len(vs))
-		for _, v := range vs {
-			sens := "not sensitive"
-			if v.Sensitive {
-				sens = "sensitive"
-			}
-			fmt.Printf("%s %s = %s (%s)\n", indent, v.Key, v.Value, sens)
-		}
-		println()
+		printWorkspaceVars(ws, vs)
 	}
 	println()
 	return
+}
+
+func printWorkspaceVars(ws string, vs []api.V2Var) {
+	if len(vs) == 0 {
+		fmt.Printf("%s has no matching variables\n\n", ws)
+		return
+	}
+
+	fmt.Printf("%s has %v matching variables ...\n", ws, len(vs))
+	for _, v := range vs {
+		sens := ""
+		if v.Sensitive {
+			sens = "(sensitive)"
+		}
+		fmt.Printf("    %s = %s %s\n", v.Key, v.Value, sens)
+	}
+	println()
 }

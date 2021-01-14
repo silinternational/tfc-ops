@@ -201,6 +201,54 @@ type AllTeamWorkspaceData struct {
 	Data []TeamWorkspaceData `json:"data"`
 }
 
+// TFVar matches the attributes of a terraform environment/workspace's variable
+type TFVar struct {
+	Key       string `json:"key"`
+	Value     string `json:"value"`
+	Hcl       bool   `json:"hcl"`
+	Sensitive bool   `json:"sensitive"`
+}
+
+// TFConfig matches the json return value of the v1 terraform configurations api
+type TFConfig struct {
+	Version struct {
+		Version  int `json:"version"`
+		Metadata struct {
+			Foo string `json:"foo"`
+		} `json:"metadata"`
+		TfVars    []TFVar           `json:"tf_vars"`
+		Variables map[string]string `json:"variables"`
+	} `json:"version"`
+}
+
+// GetTFVarsFromConfig calls the v1 terraform configurations api and
+// returns a list of Terraform variables for a given environment
+func GetTFVarsFromConfig(organization, envName, tfToken string) ([]TFVar, error) {
+
+	url := fmt.Sprintf(
+		"https://atlas.hashicorp.com/api/v1/terraform/configurations/%s/%s/versions/latest",
+		organization,
+		envName,
+	)
+
+	headers := map[string]string{
+		"X-Atlas-Token": tfToken,
+	}
+	resp := CallAPI("GET", url, "", headers)
+
+	defer resp.Body.Close()
+	// bodyBytes, _ := ioutil.ReadAll(resp.Body)
+	// fmt.Println(string(bodyBytes))
+
+	var tfConfig TFConfig
+
+	if err := json.NewDecoder(resp.Body).Decode(&tfConfig); err != nil {
+		return nil, err
+	}
+
+	return tfConfig.Version.TfVars, nil
+}
+
 // ConvertHCLVariable changes a TFVar struct in place by escaping
 //  the double quotes and line endings in the Value attribute
 func ConvertHCLVariable(tfVar *TFVar) {
@@ -591,7 +639,7 @@ func CreateAndPopulateV2Workspace(
 	tfToken, vcsTokenID string,
 ) ([]string, error) {
 
-	v1Vars, err := GetTFVarsFromV1Config(mp.LegacyOrg, mp.LegacyName, tfToken)
+	v1Vars, err := GetTFVarsFromConfig(mp.LegacyOrg, mp.LegacyName, tfToken)
 	if err != nil {
 		return []string{}, err
 	}
@@ -1027,3 +1075,4 @@ func getVCSToken(vcsUsername, orgName, tfToken string) (string, error) {
 
 	return vcsTokenID, nil
 }
+

@@ -20,7 +20,7 @@ import (
 	"strings"
 
 	"github.com/spf13/cobra"
-	api "github.com/silinternational/terraform-enterprise-migrator/lib"
+	api "github.com/silinternational/tfc-ops/lib"
 )
 
 var attributes string

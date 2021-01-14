@@ -3,4 +3,5 @@
 *.tfstate.backup
 .terraform/
 /terraform-enterprise-migrator
+/tfc-ops
 .idea/

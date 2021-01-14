@@ -6,7 +6,7 @@ import (
 
 	"github.com/spf13/cobra"
 
-	updater "github.com/silinternational/terraform-enterprise-migrator/lib"
+	updater "github.com/silinternational/tfc-ops/lib"
 )
 
 var workspace string

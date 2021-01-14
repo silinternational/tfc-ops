@@ -1,4 +1,4 @@
-module github.com/silinternational/terraform-enterprise-migrator
+module github.com/silinternational/tfc-ops
 
 go 1.14
 

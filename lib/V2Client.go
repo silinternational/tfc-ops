@@ -1,18 +1,15 @@
 package lib
 
 import (
-	"bufio"
 	"bytes"
-	"encoding/csv"
+	//"io/ioutil"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
 	"os"
 	"os/exec"
 	"strings"
-	//"io/ioutil"
-	"encoding/json"
-	"text/tabwriter"
 	"time"
 )
 
@@ -221,33 +218,6 @@ type TFConfig struct {
 	} `json:"version"`
 }
 
-// GetTFVarsFromConfig calls the v1 terraform configurations api and
-// returns a list of Terraform variables for a given environment
-func GetTFVarsFromConfig(organization, envName, tfToken string) ([]TFVar, error) {
-
-	url := fmt.Sprintf(
-		"https://atlas.hashicorp.com/api/v1/terraform/configurations/%s/%s/versions/latest",
-		organization,
-		envName,
-	)
-
-	headers := map[string]string{
-		"X-Atlas-Token": tfToken,
-	}
-	resp := CallAPI("GET", url, "", headers)
-
-	defer resp.Body.Close()
-	// bodyBytes, _ := ioutil.ReadAll(resp.Body)
-	// fmt.Println(string(bodyBytes))
-
-	var tfConfig TFConfig
-
-	if err := json.NewDecoder(resp.Body).Decode(&tfConfig); err != nil {
-		return nil, err
-	}
-
-	return tfConfig.Version.TfVars, nil
-}
 
 // ConvertHCLVariable changes a TFVar struct in place by escaping
 //  the double quotes and line endings in the Value attribute
@@ -555,7 +525,7 @@ func CreateAllV2Variables(organization, workspaceName, tfToken string, tfVars []
 
 // GetCreateV2WorkspacePayload returns the json needed to make a Post to the
 // v2 terraform workspaces api
-func GetCreateV2WorkspacePayload(mp MigrationPlan, vcsTokenID string) string {
+func GetCreateV2WorkspacePayload(oc OpsConfig, vcsTokenID string) string {
 	return fmt.Sprintf(`
 {
   "data": {
@@ -574,7 +544,7 @@ func GetCreateV2WorkspacePayload(mp MigrationPlan, vcsTokenID string) string {
   }
 
 }
-  `, mp.NewName, mp.TerraformVersion, mp.Directory, mp.RepoID, vcsTokenID, mp.Branch)
+  `, oc.NewName, oc.TerraformVersion, oc.Directory, oc.RepoID, vcsTokenID, oc.Branch)
 }
 
 // UpdateV2Variable makes a v2 terraform vars api post to update a variable
@@ -601,15 +571,15 @@ func UpdateV2Variable(organization, workspaceName, variableID, tfToken string, t
 // CreateV2Workspace makes a v2 terraform workspaces api Post to create a
 // workspace for a given organization, including setting up its vcs repo integration
 func CreateV2Workspace(
-	mp MigrationPlan,
+	oc OpsConfig,
 	tfToken, vcsTokenID string,
 ) (string, error) {
 	url := fmt.Sprintf(
 		"https://app.terraform.io/api/v2/organizations/%s/workspaces",
-		mp.NewOrg,
+		oc.NewOrg,
 	)
 
-	postData := GetCreateV2WorkspacePayload(mp, vcsTokenID)
+	postData := GetCreateV2WorkspacePayload(oc, vcsTokenID)
 
 	headers := map[string]string{
 		"Authorization": "Bearer " + tfToken,
@@ -629,35 +599,6 @@ func CreateV2Workspace(
 	return v2WsData.Data.ID, nil
 }
 
-// CreateAndPopulateV2Workspace makes several api calls to get the variable values
-// for a v1 terraform environment and create a corresponding v2 terraform
-// workspace along with those same variables.
-// Note that the values for sensitive v1 variables will need to be corrected
-// in the v2 workspace.
-func CreateAndPopulateV2Workspace(
-	mp MigrationPlan,
-	tfToken, vcsTokenID string,
-) ([]string, error) {
-
-	v1Vars, err := GetTFVarsFromConfig(mp.LegacyOrg, mp.LegacyName, tfToken)
-	if err != nil {
-		return []string{}, err
-	}
-
-	CreateV2Workspace(mp, tfToken, vcsTokenID)
-
-	CreateAllV2Variables(mp.NewOrg, mp.NewName, tfToken, v1Vars)
-	sensitiveVars := []string{}
-	sensitiveValue := "TF_ENTERPRISE_SENSITIVE_VAR"
-
-	for _, nextVar := range v1Vars {
-		if nextVar.Value == sensitiveValue {
-			sensitiveVars = append(sensitiveVars, nextVar.Key)
-		}
-	}
-
-	return sensitiveVars, nil
-}
 
 // RunTFInit ...
 //  - removes old terraform.tfstate files
@@ -665,7 +606,7 @@ func CreateAndPopulateV2Workspace(
 //  - runs terraform init with new version
 // NOTE: This procedure can be used to copy/migrate a workspace's state to a new one.
 //  (see the -backend-config mention below and the backend.tf file in this repo)
-func RunTFInit(mp MigrationPlan, tfToken, tfTokenDestination string) error {
+func RunTFInit(oc OpsConfig, tfToken, tfTokenDestination string) error {
 	var tfInit string
 	var err error
 	var osCmd *exec.Cmd
@@ -688,7 +629,7 @@ func RunTFInit(mp MigrationPlan, tfToken, tfTokenDestination string) error {
 		return fmt.Errorf("Error setting %s environment variable to source value: %s", tokenEnv, err)
 	}
 
-	tfInit = fmt.Sprintf(`-backend-config=name=%s/%s`, mp.LegacyOrg, mp.LegacyName)
+	tfInit = fmt.Sprintf(`-backend-config=name=%s/%s`, oc.SourceOrg, oc.SourceName)
 
 	osCmd = exec.Command("terraform", "init", tfInit)
 	osCmd.Stderr = &stderr
@@ -705,7 +646,7 @@ func RunTFInit(mp MigrationPlan, tfToken, tfTokenDestination string) error {
 	}
 
 	// Run tf init with new version
-	tfInit = fmt.Sprintf(`-backend-config=name=%s/%s`, mp.NewOrg, mp.NewName)
+	tfInit = fmt.Sprintf(`-backend-config=name=%s/%s`, oc.NewOrg, oc.NewName)
 	osCmd = exec.Command("terraform", "init", tfInit)
 	osCmd.Stderr = &stderr
 
@@ -739,140 +680,6 @@ func RunTFInit(mp MigrationPlan, tfToken, tfTokenDestination string) error {
 	return nil
 }
 
-// CreateAndPopulateAllV2Workspaces makes several api calls to retrieve variables
-// from v1 environments and create and populate corresponding v2 workspaces.
-//   It relies on a csv file with the following columns (the first row will be ignored).
-//   Note: these columns are defined by the MigrationPlan struct
-// - the name of the organization in Legacy
-// - the name of the legacy environment
-// - the of the organization in the new Enterprise
-// - the name of the new workspace
-// - the new terraform version (e.g. ""0.11.3")
-// - the id of the version control repo (e.g. "myorg/myproject")
-// - the version control branch that the new workspace should be linked to
-// - the directory that holds the terraform configuration files in the vcs repo
-//
-// It also runs `terraform init` with the legacy information and then again with
-// the new version.
-func CreateAndPopulateAllV2Workspaces(configFile, tfToken, vcsUsername string) (map[string][]string, error) {
-	var sensitiveVars []string
-	var allPlans []MigrationPlan
-
-	completed := map[string][]string{}
-
-	// Get config contents
-	csvFile, err := os.Open(configFile)
-	if err != nil {
-		return completed, err
-	}
-
-	reader := csv.NewReader(bufio.NewReader(csvFile))
-
-	// Throw away the first line with its column headers
-	_, err = reader.Read()
-	if err != nil {
-		newErr := fmt.Errorf("Error reading first row of the plan ...\n %s", err.Error())
-		return completed, newErr
-	}
-
-	vcsTokenIDs := map[string]string{}
-
-	for rowNum := 2; ; rowNum++ {
-		line, err := reader.Read()
-		if err == io.EOF {
-			break
-		} else if err != nil {
-			newErr := fmt.Errorf("Error reading row %d of the plan ...\n %s", rowNum, err.Error())
-			return completed, newErr
-		}
-
-		migrationPlan, err := NewMigrationPlan(line)
-		if err != nil {
-			fmt.Printf("Skipping row %d because of an error ...\n %s\n", rowNum, err.Error())
-			continue
-		}
-		allPlans = append(allPlans, migrationPlan)
-	}
-
-	println("\n\n *** The following environments will be migrated\n")
-
-	w := tabwriter.NewWriter(os.Stdout, 0, 3, 3, ' ', 0)
-	tabbedNames := "Legacy Environment\tNew Workspace"
-	fmt.Fprintln(w, tabbedNames)
-	fmt.Fprintln(w, "-----------------------------\t---------------------")
-
-	for _, migrationPlan := range allPlans {
-		nextMigration := fmt.Sprintf(
-			"%s/%s\t%s/%s",
-			migrationPlan.LegacyOrg,
-			migrationPlan.LegacyName,
-			migrationPlan.NewOrg,
-			migrationPlan.NewName,
-		)
-		fmt.Fprintln(w, nextMigration)
-	}
-	w.Flush()
-	fmt.Print("\nContinue? [y/N]  ")
-	var userResponse string
-	fmt.Scanln(&userResponse)
-
-	if userResponse != "y" && userResponse != "Y" {
-		err = fmt.Errorf(" NOTICE: User canceled migration")
-		return completed, err
-	}
-
-	println()
-
-	for _, migrationPlan := range allPlans {
-
-		// If we have a vcsTokenID for this org use it. Otherwise, get one from the api
-		var vcsTokenID string
-		oldID, haveOneAlready := vcsTokenIDs[migrationPlan.NewOrg]
-		if haveOneAlready {
-			vcsTokenID = oldID
-		} else {
-			tokenID, err := getVCSToken(vcsUsername, migrationPlan.NewOrg, tfToken)
-			if err != nil {
-				fmt.Printf(
-					"Skipping workspace %s because of an error getting the VCS Token ID for %s with %s ...\n %s\n",
-					migrationPlan.NewName,
-					vcsUsername,
-					migrationPlan.NewOrg,
-					err.Error(),
-				)
-				continue
-			}
-			vcsTokenIDs[migrationPlan.NewOrg] = tokenID
-			vcsTokenID = tokenID
-		}
-
-		if vcsTokenID == "" {
-			fmt.Printf(
-				"Skipping workspace %s because no VCS Token ID was available for %s with %s",
-				migrationPlan.NewName,
-				vcsUsername,
-				migrationPlan.NewOrg,
-			)
-			continue
-		}
-
-		fmt.Printf("  >>> Migrating %s/%s ... ", migrationPlan.NewOrg, migrationPlan.NewName)
-		sensitiveVars, err = CreateAndPopulateV2Workspace(migrationPlan, tfToken, vcsTokenID)
-		if err != nil {
-			return completed, err
-		}
-
-		completed[migrationPlan.NewName] = sensitiveVars
-
-		err = RunTFInit(migrationPlan, tfToken, tfToken)
-		if err != nil {
-			return completed, err
-		}
-		println("Done")
-	}
-
-	return completed, nil
-}
 
 // CloneV2Workspace gets the data, variables and team access data for an existing Terraform Enterprise workspace
 //  and then creates a clone of it with the same data.
@@ -895,9 +702,9 @@ func CloneV2Workspace(cfg V2CloneConfig) ([]string, error) {
 		cfg.NewVCSTokenID = v2WsData.Data.Attributes.VCSRepo.ID
 	}
 
-	mp := MigrationPlan{
-		LegacyOrg:        cfg.Organization,
-		LegacyName:       v2WsData.Data.Attributes.Name,
+	oc := OpsConfig{
+		SourceOrg:        cfg.Organization,
+		SourceName:       v2WsData.Data.Attributes.Name,
 		NewOrg:           cfg.NewOrganization,
 		NewName:          cfg.NewWorkspace,
 		TerraformVersion: v2WsData.Data.Attributes.TerraformVersion,
@@ -934,11 +741,11 @@ func CloneV2Workspace(cfg V2CloneConfig) ([]string, error) {
 	}
 
 	if cfg.DifferentDestinationAccount {
-		CreateV2Workspace(mp, cfg.AtlasTokenDestination, cfg.NewVCSTokenID)
-		CreateAllV2Variables(mp.NewOrg, mp.NewName, cfg.AtlasTokenDestination, tfVars)
+		CreateV2Workspace(oc, cfg.AtlasTokenDestination, cfg.NewVCSTokenID)
+		CreateAllV2Variables(oc.NewOrg, oc.NewName, cfg.AtlasTokenDestination, tfVars)
 
 		if cfg.CopyState {
-			if err := RunTFInit(mp, cfg.AtlasToken, cfg.AtlasTokenDestination); err != nil {
+			if err := RunTFInit(oc, cfg.AtlasToken, cfg.AtlasTokenDestination); err != nil {
 				return sensitiveVars, err
 			}
 		}
@@ -946,8 +753,8 @@ func CloneV2Workspace(cfg V2CloneConfig) ([]string, error) {
 		return sensitiveVars, nil
 	}
 
-	CreateV2Workspace(mp, cfg.AtlasToken, v2WsData.Data.Attributes.VCSRepo.TokenID)
-	CreateAllV2Variables(mp.NewOrg, mp.NewName, cfg.AtlasToken, tfVars)
+	CreateV2Workspace(oc, cfg.AtlasToken, v2WsData.Data.Attributes.VCSRepo.TokenID)
+	CreateAllV2Variables(oc.NewOrg, oc.NewName, cfg.AtlasToken, tfVars)
 
 	// Get Team Access Data for source Workspace
 	allTeamData, err := GetTeamAccessFromV2(v2WsData.Data.ID, cfg.AtlasToken)

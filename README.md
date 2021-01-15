@@ -1,4 +1,4 @@
-# Terraform Enterprise Migration Tool
+# Terraform Cloud Ops Tool
 This application can be helpful in making copies/clones of a workspace and bringing its variables over
 to the new one. It can also be used for listing workspaces and listing or modifying variables in workspaces.
 
@@ -55,7 +55,7 @@ List the workspaces with at least one of their attributes/pieces of data.
 ### General Help
 ```text
 $ terraform-cloud-ops -h
-Perform TF Cloud operations, e.g. clone a workspace or search for variables within a workspace
+Perform TF Cloud operations, e.g. clone a workspace or manage variables within a workspace
 
 Usage:
   terraform-cloud-ops [command]

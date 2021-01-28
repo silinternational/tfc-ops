@@ -29,10 +29,9 @@ var atlasTokenDestination string
 
 // rootCmd represents the base command when called without any subcommands
 var rootCmd = &cobra.Command{
-	Use:   "terraform-enterprise-migrator",
-	Short: "Migration script for moving environments from Terraform Enterprise (Legacy) to Terraform Enterprise",
-	Long: `Migration is a three step process. First run plan, modify the generated file as needed, then run migrate to process the plan file.
-Alternatively, you can clone a V2 workspace.`,
+	Use:   "terraform-cloud-ops",
+	Short: "Terraform Cloud operations",
+	Long: `Perform TF Cloud operations, e.g. clone a workspace or search for variables within a workspace`,
 	// Uncomment the following line if your bare application
 	// has an action associated with it:
 	//	Run: func(cmd *cobra.Command, args []string) { },

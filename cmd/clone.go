@@ -17,7 +17,7 @@ package cmd
 import (
 	"fmt"
 	"os"
-	cloner "github.com/silinternational/terraform-enterprise-migrator/lib"
+	cloner "github.com/silinternational/tfc-ops/lib"
 	"github.com/spf13/cobra"
 )
 

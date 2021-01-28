@@ -14,7 +14,7 @@
 
 package main
 
-import "github.com/silinternational/terraform-enterprise-migrator/cmd"
+import "github.com/silinternational/tfc-ops/cmd"
 
 func main() {
 	cmd.Execute()

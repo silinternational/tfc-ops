@@ -137,6 +137,7 @@ Flags:
 ```
 
 ### List Variables
+```text
 $ terraform-cloud-ops variables -h
 
 Show the values of variables with a key or value containing a certain string
@@ -150,7 +151,7 @@ Flags:
   -o, --organization string     [required] - Name of Terraform Enterprise Organization
   -v, --value_contains string   [required] if key_contains is blank - string contained in the Terraform variable values to report on
   -w, --workspace string        [optional] Name of the Workspace in TF Enterprise
-
+```
 
 ### Update Help
 ```text

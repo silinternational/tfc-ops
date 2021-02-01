@@ -25,24 +25,24 @@ var updateCmd = &cobra.Command{
 	Args:  cobra.ExactArgs(0),
 	Run: func(cmd *cobra.Command, args []string) {
 		if organization == "" {
-			fmt.Println("Error: The 'organization' flag is required\n")
+			fmt.Println("Error: The 'organization' flag is required")
 			os.Exit(1)
 		}
 		if workspace == "" {
-			fmt.Println("Error: The 'workspace' flag is required\n")
+			fmt.Println("Error: The 'workspace' flag is required")
 			os.Exit(1)
 		}
 
 		if variableSearchString == "" {
-			fmt.Println("Error: The 'variable-search-string' flag is required\n")
+			fmt.Println("Error: The 'variable-search-string' flag is required")
 			os.Exit(1)
 		}
 		if newVariableValue == "" {
-			fmt.Println("Error: The 'new-variable-value' flag is required\n")
+			fmt.Println("Error: The 'new-variable-value' flag is required")
 			os.Exit(1)
 		}
 		if addKeyIfNotFound && searchOnVariableValue {
-			fmt.Println("Error: The 'add-key-if-not-found' flag may not be used with the 'search-on-variable-value' flag\n")
+			fmt.Println("Error: The 'add-key-if-not-found' flag may not be used with the 'search-on-variable-value' flag")
 			os.Exit(1)
 		}
 		config := updater.V2UpdateConfig{

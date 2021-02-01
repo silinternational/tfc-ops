@@ -21,8 +21,8 @@ import (
 // variablesCmd represents the top level command for variables
 var variablesCmd = &cobra.Command{
 	Use:   "variables",
-	Short: "Report on variables",
-	Long:  `Show the values of variables with a key or value containing a certain string`,
+	Short: "Update or List variables",
+	Long:  `Top level command to update or lists variables in all workspaces`,
 	Args:  cobra.MinimumNArgs(1),
 }
 

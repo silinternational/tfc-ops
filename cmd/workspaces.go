@@ -21,8 +21,8 @@ import (
 // variablesCmd represents the top level command for variables
 var workspaceCmd = &cobra.Command{
 	Use:   "workspaces",
-	Short: "Report on workspaces",
-	Long:  `Show the values of workspaces with a key or value containing a certain string`,
+	Short: "Clone or List workspaces",
+	Long:  `Top level command for reporting on workspace or cloning a workspace`,
 	Args:  cobra.MinimumNArgs(1),
 }
 

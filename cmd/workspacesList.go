@@ -48,7 +48,7 @@ var listCmd = &cobra.Command{
 }
 
 func init() {
-	rootCmd.AddCommand(listCmd)
+	workspaceCmd.AddCommand(listCmd)
 
 	listCmd.Flags().StringVarP(&organization, "organization", "o", "",
 		"required - Name of Terraform Enterprise Organization")

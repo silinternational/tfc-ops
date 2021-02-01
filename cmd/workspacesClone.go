@@ -77,7 +77,7 @@ var cloneCmd = &cobra.Command{
 }
 
 func init() {
-	rootCmd.AddCommand(cloneCmd)
+	workspaceCmd.AddCommand(cloneCmd)
 	cloneCmd.Flags().StringVarP(
 		&organization,
 		"organization",

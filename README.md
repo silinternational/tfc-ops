@@ -20,11 +20,11 @@ Examples.
 
 Get help about the command.
 
-```$ go run main.go clone -h```
+```$ go run main.go workspaces clone -h```
 
 Clone just the workspace (no variables) to the same organization.
 
-```$ go run main.go clone -o=my-org -s=source-workspace -n=new-workspace```
+```$ go run main.go workspaces clone -o=my-org -s=source-workspace -n=new-workspace```
 
 Clone a workspace, its variables and its state to a different organization in TF Cloud.
 
@@ -34,7 +34,7 @@ workspace will need to be moved in the destination workspace from the normal var
 down to the environment variables section (e.g. `CONFIRM_DESTROY`).
 
 ```
-$ go run main.go clone -c=true -t=true -o=org1 -p=org2 -d=true \
+$ go run main.go workspaces clone -c=true -t=true -o=org1 -p=org2 -d=true \
 $   -s=source-workspace -n=destination-workspace -v=org2-vcs-token
 ```
 
@@ -44,11 +44,11 @@ Examples.
 
 Get help about the command.
 
-```$ go run main.go list -h```
+```$ go run main.go workspaces list -h```
 
 List the workspaces with at least one of their attributes/pieces of data.
 
-```$ go run main.go list -o=gtis -a=id,name,createdat,environment,workingdirectory,terraformversion,vcsrepo```
+```$ go run main.go workspaces list -o=gtis -a=id,name,createdat,environment,workingdirectory,terraformversion,vcsrepo```
 
 ## Usage
 
@@ -61,11 +61,9 @@ Usage:
   terraform-cloud-ops [command]
 
 Available Commands:
-  clone       Clone a V2 Workspace
   help        Help about any command
-  list        List Workspaces
-  update      Update/add a variable in a V2 Workspace
   variables   Report on variables
+  workspaces  Report on workspaces
 
 Flags:
   -h, --help   help for terraform-cloud-ops
@@ -73,18 +71,34 @@ Flags:
 Use "terraform-cloud-ops [command] --help" for more information about a command.
 ```
 
+### Workspaces Help
+```text
+Top Level Command for the following sub-commands
+
+Usage:
+  terraform-cloud-ops workspaces [command]
+
+Available Commands:
+  clone       Clone a V2 Workspace
+  list        List Workspaces
+
+Flags:
+  -h, --help   help for workspaces
+```
+
+
 ### Clone Help
 ```text
-$ terraform-cloud-ops clone -h
+$ terraform-cloud-ops workspaces clone -h
 Clone a TF Enterprise Version 2 Workspace
 
 Usage:
   terraform-cloud-ops clone [flags]
 
 Flags:
-  -t, --copyState                     optional (e.g. "-t=true") whether to copy the state of the Source Workspace (only possible if copying to a new account).
-  -c, --copyVariables                 optional (e.g. "-c=true") whether to copy the values of the Source Workspace variables.
-  -d, --differentDestinationAccount   optional (e.g. "-d=true") whether to clone to a different TF account.
+  -t, --copyState                     [optional] (e.g. "-t=true") whether to copy the state of the Source Workspace (only possible if copying to a new account).
+  -c, --copyVariables                 [optional] (e.g. "-c=true") whether to copy the values of the Source Workspace variables.
+  -d, --differentDestinationAccount   [optional] (e.g. "-d=true") whether to clone to a different TF account.
   -h, --help                          help for clone
   -p, --new-organization string       Name of the Destination Organization in TF Enterprise (version 2)
   -v, --new-vcs-token-id string       The new Organization's VCS repo's oauth-token-id
@@ -95,52 +109,66 @@ Flags:
 
 ### List Help
 ```text
-$ terraform-cloud-ops list -h
+$ terraform-cloud-ops workspaces list -h
 Lists the TF workspaces with (some of) their attributes
 
 Usage:
-  terraform-cloud-ops list [flags]
+  terraform-cloud-ops workspaces list [flags]
 
 Flags:
-  -a, --attributes string     required - Workspace attributes to list: id,name,createdat,environment,workingdirectory,terraformversion,vcsrepo
+  -a, --attributes string     [required] - Workspace attributes to list: id,name,createdat,environment,workingdirectory,terraformversion,vcsrepo
   -h, --help                  help for list
-  -o, --organization string   required - Name of Terraform Enterprise Organization
-```
-
-
-### Update Help
-```text
-$ terraform-cloud-ops update -h
-Update or add a variable in a TF Enterprise Version 2 Workspace based on a complete case-insensitive match
-
-Usage:
-  terraform-cloud-ops update [flags]
-
-Flags:
-  -a, --add-key-if-not-found            optional (e.g. "-a=true") whether to add a new variable if a matching key is not found.
-  -d, --dry-run-mode                    optional (e.g. "-d=true") dry run mode only.
-  -h, --help                            help for update
-  -n, --new-variable-value string       The desired new value of the variable
-  -o, --organization string             Name of the Organization in TF Enterprise (version 2)
-  -v, --search-on-variable-value        optional (e.g. "-v=true") whether to do the search based on the value of the variables. (Must be false if add-key-if-not-found is true
-  -s, --variable-search-string string   The string to match in the current variables (either in the Key or Value - see other flags)
-  -w, --workspace string                Name of the Workspace in TF Enterprise (version 2)
+  -o, --organization string   [required] - Name of Terraform Enterprise Organization
 ```
 
 ### Variables Help
 ```text
+Top Level Command for the following sub-commands
+
+Usage:
+  terraform-cloud-ops variables [command]
+
+Available Commands:
+  list        Report on variables
+  update      Update/add a variable in a V2 Workspace
+
+Flags:
+  -h, --help   help for variables
+```
+
+### List Variables
 $ terraform-cloud-ops variables -h
+
 Show the values of variables with a key or value containing a certain string
 
 Usage:
-  terraform-cloud-ops variables [flags]
+  terraform-cloud-ops variables list [flags]
 
 Flags:
   -h, --help                    help for variables
-  -k, --key_contains string     required if value_contains is blank - string contained in the Terraform variable keys to report on
-  -o, --organization string     required - Name of Terraform Enterprise Organization
-  -v, --value_contains string   required if key_contains is blank - string contained in the Terraform variable values to report on
-  -w, --workspace string        Name of the Workspace in TF Enterprise
+  -k, --key_contains string     [required] if value_contains is blank - string contained in the Terraform variable keys to report on
+  -o, --organization string     [required] - Name of Terraform Enterprise Organization
+  -v, --value_contains string   [required] if key_contains is blank - string contained in the Terraform variable values to report on
+  -w, --workspace string        [optional] Name of the Workspace in TF Enterprise
+
+
+### Update Help
+```text
+$ terraform-cloud-ops variables update -h
+Update or add a variable in a TF Enterprise Version 2 Workspace based on a complete case-insensitive match
+
+Usage:
+  terraform-cloud-ops variables update [flags]
+
+Flags:
+  -a, --add-key-if-not-found            [optional] (e.g. "-a=true") whether to add a new variable if a matching key is not found.
+  -d, --dry-run-mode                    [optional] (e.g. "-d=true") dry run mode only.
+  -h, --help                            help for update
+  -n, --new-variable-value string       The desired new value of the variable
+  -o, --organization string             Name of the Organization in TF Enterprise (version 2)
+  -v, --search-on-variable-value        [optional] (e.g. "-v=true") whether to do the search based on the value of the variables. (Must be false if add-key-if-not-found is true
+  -s, --variable-search-string string   The string to match in the current variables (either in the Key or Value - see other flags)
+  -w, --workspace string                Name of the Workspace in TF Enterprise (version 2)
 ```
 
 ## License

@@ -62,7 +62,7 @@ var updateCmd = &cobra.Command{
 }
 
 func init() {
-	rootCmd.AddCommand(updateCmd)
+	variablesCmd.AddCommand(updateCmd)
 	updateCmd.Flags().StringVarP(
 		&organization,
 		"organization",

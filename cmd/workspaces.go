@@ -19,14 +19,16 @@ import (
 )
 
 // variablesCmd represents the top level command for variables
-var variablesCmd = &cobra.Command{
-	Use:   "variables",
-	Short: "Report on variables",
-	Long:  `Show the values of variables with a key or value containing a certain string`,
+var workspaceCmd = &cobra.Command{
+	Use:   "workspaces",
+	Short: "Report on workspaces",
+	Long:  `Show the values of workspaces with a key or value containing a certain string`,
 	Args:  cobra.MinimumNArgs(1),
 }
 
 func init() {
-	rootCmd.AddCommand(variablesCmd)
+	rootCmd.AddCommand(workspaceCmd)
 }
+
+
 

@@ -54,21 +54,21 @@ List the workspaces with at least one of their attributes/pieces of data.
 
 ### General Help
 ```text
-$ terraform-cloud-ops -h
+$ tfc-ops -h
 Perform TF Cloud operations, e.g. clone a workspace or manage variables within a workspace
 
 Usage:
-  terraform-cloud-ops [command]
+  tfc-ops [command]
 
 Available Commands:
   help        Help about any command
-  variables   Report on variables
-  workspaces  Report on workspaces
+  variables   Operations and reports related to on variables
+  workspaces  Operations and reports related to on workspaces
 
 Flags:
-  -h, --help   help for terraform-cloud-ops
+  -h, --help   help for tfc-ops
 
-Use "terraform-cloud-ops [command] --help" for more information about a command.
+Use "tfc-ops [command] --help" for more information about a command.
 ```
 
 ### Workspaces Help
@@ -76,7 +76,7 @@ Use "terraform-cloud-ops [command] --help" for more information about a command.
 Top Level Command for the following sub-commands
 
 Usage:
-  terraform-cloud-ops workspaces [command]
+  tfc-ops workspaces [command]
 
 Available Commands:
   clone       Clone a V2 Workspace
@@ -89,11 +89,11 @@ Flags:
 
 ### Clone Help
 ```text
-$ terraform-cloud-ops workspaces clone -h
+$ tfc-ops workspaces clone -h
 Clone a TF Enterprise Version 2 Workspace
 
 Usage:
-  terraform-cloud-ops clone [flags]
+  tfc-ops clone [flags]
 
 Flags:
   -t, --copyState                     [optional] (e.g. "-t=true") whether to copy the state of the Source Workspace (only possible if copying to a new account).
@@ -109,11 +109,11 @@ Flags:
 
 ### List Help
 ```text
-$ terraform-cloud-ops workspaces list -h
+$ tfc-ops workspaces list -h
 Lists the TF workspaces with (some of) their attributes
 
 Usage:
-  terraform-cloud-ops workspaces list [flags]
+  tfc-ops workspaces list [flags]
 
 Flags:
   -a, --attributes string     [required] - Workspace attributes to list: id,name,createdat,environment,workingdirectory,terraformversion,vcsrepo
@@ -126,7 +126,7 @@ Flags:
 Top Level Command for the following sub-commands
 
 Usage:
-  terraform-cloud-ops variables [command]
+  tfc-ops variables [command]
 
 Available Commands:
   list        Report on variables
@@ -138,12 +138,12 @@ Flags:
 
 ### List Variables
 ```text
-$ terraform-cloud-ops variables -h
+$ tfc-ops variables -h
 
 Show the values of variables with a key or value containing a certain string
 
 Usage:
-  terraform-cloud-ops variables list [flags]
+  tfc-ops variables list [flags]
 
 Flags:
   -h, --help                    help for variables
@@ -155,11 +155,11 @@ Flags:
 
 ### Update Help
 ```text
-$ terraform-cloud-ops variables update -h
+$ tfc-ops variables update -h
 Update or add a variable in a TF Enterprise Version 2 Workspace based on a complete case-insensitive match
 
 Usage:
-  terraform-cloud-ops variables update [flags]
+  tfc-ops variables update [flags]
 
 Flags:
   -a, --add-key-if-not-found            [optional] (e.g. "-a=true") whether to add a new variable if a matching key is not found.

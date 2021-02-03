@@ -57,7 +57,7 @@ var updateCmd = &cobra.Command{
 			SensitiveVariable:     sensitiveVariable,
 		}
 
-		runUpdateVariable(config)
+		runUpdateVariables(config)
 	},
 }
 
@@ -121,7 +121,7 @@ func init() {
 	)
 }
 
-func runUpdateVariable(cfg updater.V2UpdateConfig) {
+func runUpdateVariables(cfg updater.V2UpdateConfig) {
 	if cfg.AddKeyIfNotFound {
 		if cfg.SearchOnVariableValue {
 			println("update variable aborted. Because addKeyIfNotFound was true, searchOnVariableValue must be set to false")

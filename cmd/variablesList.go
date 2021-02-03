@@ -62,7 +62,7 @@ var variablesListCmd = &cobra.Command{
 			wsMsg = "all workspaces"
 		}
 		fmt.Printf("Getting variables from %s with%s%s\n", wsMsg, keyMsg, valMsg)
-		runVariables()
+		runVariablesList()
 	},
 }
 
@@ -79,7 +79,7 @@ func init() {
 	)
 }
 
-func runVariables() {
+func runVariablesList() {
 	if workspace != "" {
 		vars, err := api.GetMatchingVarsFromV2(organization, workspace, atlasToken, keyContains, valueContains)
 		if err != nil {

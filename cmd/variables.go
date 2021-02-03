@@ -17,7 +17,7 @@ package cmd
 import (
 	"fmt"
 	"os"
-
+	"text/tabwriter"
 	"github.com/spf13/cobra"
 
 	api "github.com/silinternational/tfc-ops/lib"
@@ -62,7 +62,7 @@ var variablesCmd = &cobra.Command{
 		if wsMsg == "" {
 			wsMsg = "all workspaces"
 		}
-		fmt.Printf("Getting variables from %s with%s%s\n\n", wsMsg, keyMsg, valMsg)
+		fmt.Printf("Getting variables from %s with%s%s\n", wsMsg, keyMsg, valMsg)
 		runVariables()
 	},
 }
@@ -112,17 +112,21 @@ func runVariables() {
 
 func printWorkspaceVars(ws string, vs []api.V2Var) {
 	if len(vs) == 0 {
+		println()
 		fmt.Printf("%s has no matching variables\n\n", ws)
 		return
 	}
-
-	fmt.Printf("%s has %v matching variables ...\n", ws, len(vs))
+	w := tabwriter.NewWriter(os.Stdout, 0, 0, 1, ' ', tabwriter.Debug)
+	println()
+	fmt.Printf("Workspace: %s has %v matching variable(s)\n", ws, len(vs))
+	fmt.Fprintln(w, "Key \t Value \t Sensitive",)
 	for _, v := range vs {
 		sens := ""
 		if v.Sensitive {
 			sens = "(sensitive)"
 		}
-		fmt.Printf("    %s = %s %s\n", v.Key, v.Value, sens)
+		fmt.Fprintf(w, "%s \t %s \t %s\n", v.Key, v.Value, sens)
 	}
 	println()
+	w.Flush()
 }

@@ -37,18 +37,6 @@ var cloneCmd = &cobra.Command{
 	Long: `Clone a TF Enterprise Version 2 Workspace`,
 	Args:  cobra.ExactArgs(0),
 	Run: func(cmd *cobra.Command, args []string) {
-		if organization == "" {
-			fmt.Println("Error: The 'organization' flag is required")
-			os.Exit(1)
-		}
-		if sourceWorkspace == "" {
-			fmt.Println("Error: The 'source-workspace' flag is required")
-			os.Exit(1)
-		}
-		if newWorkspace == "" {
-			fmt.Println("Error: The 'new-workspace' flag is required")
-			os.Exit(1)
-		}
 		if differentDestinationAccount {
 
 		    if newOrganization == "" {
@@ -134,6 +122,9 @@ func init() {
 		false,
 		`optional (e.g. "-d=true") whether to clone to a different TF account.`,
 	)
+	cloneCmd.MarkFlagRequired("organization")
+	cloneCmd.MarkFlagRequired("source-workspace")
+	cloneCmd.MarkFlagRequired("new-workspace")
 }
 
 func runClone(cfg cloner.V2CloneConfig) {

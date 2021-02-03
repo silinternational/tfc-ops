@@ -32,11 +32,6 @@ var variablesListCmd = &cobra.Command{
 	Long:  `Show the values of variables with a key or value containing a certain string`,
 	Args:  cobra.ExactArgs(0),
 	Run: func(cmd *cobra.Command, args []string) {
-		if organization == "" {
-			fmt.Println("Error: The 'organization' flag is required")
-			fmt.Println("")
-			os.Exit(1)
-		}
 		if len(keyContains) == 0 && len(valueContains) == 0 {
 			fmt.Println("Error: Either the 'key_contains' flag or 'value_contains flag must be set")
 			fmt.Println("")
@@ -77,6 +72,7 @@ func init() {
 	variablesListCmd.Flags().StringVarP(&workspace, "workspace", "w", "",
 		`Name of the Workspace in TF Enterprise`,
 	)
+	variablesListCmd.MarkFlagRequired("organization")
 }
 
 func runVariablesList() {

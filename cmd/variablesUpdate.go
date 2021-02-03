@@ -24,23 +24,6 @@ var updateCmd = &cobra.Command{
 	Long:  `Update or add a variable in a TF Enterprise Version 2 Workspace based on a complete case-insensitive match`,
 	Args:  cobra.ExactArgs(0),
 	Run: func(cmd *cobra.Command, args []string) {
-		if organization == "" {
-			fmt.Println("Error: The 'organization' flag is required")
-			os.Exit(1)
-		}
-		if workspace == "" {
-			fmt.Println("Error: The 'workspace' flag is required")
-			os.Exit(1)
-		}
-
-		if variableSearchString == "" {
-			fmt.Println("Error: The 'variable-search-string' flag is required")
-			os.Exit(1)
-		}
-		if newVariableValue == "" {
-			fmt.Println("Error: The 'new-variable-value' flag is required")
-			os.Exit(1)
-		}
 		if addKeyIfNotFound && searchOnVariableValue {
 			fmt.Println("Error: The 'add-key-if-not-found' flag may not be used with the 'search-on-variable-value' flag")
 			os.Exit(1)
@@ -119,6 +102,10 @@ func init() {
 		false,
 		`optional (e.g. "-x=true") make the variable sensitive.`,
 	)
+	updateCmd.MarkFlagRequired("organization")
+	updateCmd.MarkFlagRequired("workspace")
+	updateCmd.MarkFlagRequired("variable-search-string")
+	updateCmd.MarkFlagRequired("new-variable-value")
 }
 
 func runUpdateVariables(cfg updater.V2UpdateConfig) {

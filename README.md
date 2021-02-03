@@ -169,7 +169,7 @@ Flags:
   -o, --organization string             Name of the Organization in TF Enterprise (version 2)
   -v, --search-on-variable-value        [optional] (e.g. "-v=true") whether to do the search based on the value of the variables. (Must be false if add-key-if-not-found is true
   -s, --variable-search-string string   The string to match in the current variables (either in the Key or Value - see other flags)
-  -w, --workspace string                Name of the Workspace in TF Enterprise (version 2)
+  -w, --workspace string                [optional] Name of the Workspace in TF Enterprise (version 2)
 ```
 
 ## License

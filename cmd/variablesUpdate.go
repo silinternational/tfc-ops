@@ -3,9 +3,13 @@ package cmd
 import (
 	"fmt"
 	"os"
+	"log"
+	"strings"
 
 	"github.com/spf13/cobra"
+	"github.com/manifoldco/promptui"
 
+	api "github.com/silinternational/tfc-ops/lib"
 	updater "github.com/silinternational/tfc-ops/lib"
 )
 
@@ -39,8 +43,11 @@ var updateCmd = &cobra.Command{
 			DryRunMode:            dryRunMode,
 			SensitiveVariable:     sensitiveVariable,
 		}
-
-		runUpdateVariables(config)
+		if workspace == ""{
+			runVariablesUpdateAll(config)
+		}else{
+			runVariablesUpdate(config)
+		}
 	},
 }
 
@@ -103,12 +110,11 @@ func init() {
 		`optional (e.g. "-x=true") make the variable sensitive.`,
 	)
 	updateCmd.MarkFlagRequired("organization")
-	updateCmd.MarkFlagRequired("workspace")
 	updateCmd.MarkFlagRequired("variable-search-string")
 	updateCmd.MarkFlagRequired("new-variable-value")
 }
 
-func runUpdateVariables(cfg updater.V2UpdateConfig) {
+func runVariablesUpdate(cfg updater.V2UpdateConfig) {
 	if cfg.AddKeyIfNotFound {
 		if cfg.SearchOnVariableValue {
 			println("update variable aborted. Because addKeyIfNotFound was true, searchOnVariableValue must be set to false")
@@ -133,4 +139,38 @@ func runUpdateVariables(cfg updater.V2UpdateConfig) {
 	println("\n  **** Completed Updating ****")
 	println(message)
 
+}
+
+func runVariablesUpdateAll(cfg updater.V2UpdateConfig){
+	allData, err := api.GetV2AllWorkspaceData(organization, atlasToken)
+	for _, ws := range allData {
+		value, err := ws.AttributeByLabel(strings.Trim("name", " "))
+		fmt.Printf("Do you want to update the variable %s across the workspace: %s\n\n", variableSearchString, value)
+		if awaitUserResponse() {
+			cfg.Workspace = value
+			runVariablesUpdate(cfg)
+
+			if err != nil {
+				fmt.Println("\n", err.Error())
+				return
+			}
+		}
+	}
+
+	if err != nil {
+		fmt.Println(err.Error())
+		return
+	}
+}
+
+func awaitUserResponse() bool {
+	prompt := promptui.Select{
+		Label: "Select[Yes/No]",
+		Items: []string{"No", "Yes"},
+	}
+	_, result, err := prompt.Run()
+	if err != nil {
+		log.Fatalf("Prompt failed %v\n", err)
+	}
+	return result == "Yes"
 }

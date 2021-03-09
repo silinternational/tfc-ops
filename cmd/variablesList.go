@@ -106,8 +106,6 @@ func runVariablesList() {
 
 func printWorkspaceVars(ws string, vs []api.V2Var) {
 	if len(vs) == 0 {
-		println()
-		fmt.Printf("%s has no matching variables\n\n", ws)
 		return
 	}
 	w := tabwriter.NewWriter(os.Stdout, 0, 0, 1, ' ', tabwriter.Debug)

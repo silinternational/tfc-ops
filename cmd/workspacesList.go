@@ -16,9 +16,7 @@ package cmd
 
 import (
 	"fmt"
-	"os"
 	"strings"
-
 	"github.com/spf13/cobra"
 	api "github.com/silinternational/tfc-ops/lib"
 )
@@ -32,16 +30,6 @@ var listCmd = &cobra.Command{
 	Long: `Lists the TF workspaces with (some of) their attributes`,
 	Args: cobra.ExactArgs(0),
 	Run: func(cmd *cobra.Command, args []string) {
-		if organization == "" {
-			fmt.Println("Error: The 'organization' flag is required")
-			fmt.Println("")
-			os.Exit(1)
-		}
-		if len(attributes) == 0 {
-			fmt.Println("Error: The 'attributes' flag is required")
-			fmt.Println("")
-			os.Exit(1)
-		}
 		fmt.Println("Getting list of workspaces ...")
 		runList()
 	},
@@ -49,12 +37,12 @@ var listCmd = &cobra.Command{
 
 func init() {
 	workspaceCmd.AddCommand(listCmd)
-
 	listCmd.Flags().StringVarP(&organization, "organization", "o", "",
 		"required - Name of Terraform Enterprise Organization")
 	listCmd.Flags().StringVarP(&attributes, "attributes", "a", "",
 		"required - Workspace attributes to list: id,name,createdat,environment,workingdirectory,terraformversion,vcsrepo")
-
+	listCmd.MarkFlagRequired("organization")
+	listCmd.MarkFlagRequired("attributes")
 }
 
 func runList() {

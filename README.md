@@ -62,8 +62,8 @@ Usage:
 
 Available Commands:
   help        Help about any command
-  variables   Operations and reports related to on variables
-  workspaces  Operations and reports related to on workspaces
+  variables   Operations and reports related to variables
+  workspaces  Operations and reports related to workspaces
 
 Flags:
   -h, --help   help for tfc-ops
@@ -87,7 +87,7 @@ Flags:
 ```
 
 
-### Clone Help
+### Workspace Clone Help
 ```text
 $ tfc-ops workspaces clone -h
 Clone a TF Enterprise Version 2 Workspace
@@ -107,7 +107,7 @@ Flags:
   -s, --source-workspace string       Name of the Source Workspace in TF Enterprise (version 2)
 ```
 
-### List Help
+### Workspace List Help
 ```text
 $ tfc-ops workspaces list -h
 Lists the TF workspaces with (some of) their attributes
@@ -136,7 +136,7 @@ Flags:
   -h, --help   help for variables
 ```
 
-### List Variables
+### Variables List Help
 ```text
 $ tfc-ops variables -h
 
@@ -153,7 +153,7 @@ Flags:
   -w, --workspace string        [optional] Name of the Workspace in TF Enterprise
 ```
 
-### Update Help
+### Variables Update Help
 ```text
 $ tfc-ops variables update -h
 Update or add a variable in a TF Enterprise Version 2 Workspace based on a complete case-insensitive match
@@ -169,7 +169,7 @@ Flags:
   -o, --organization string             Name of the Organization in TF Enterprise (version 2)
   -v, --search-on-variable-value        [optional] (e.g. "-v=true") whether to do the search based on the value of the variables. (Must be false if add-key-if-not-found is true
   -s, --variable-search-string string   The string to match in the current variables (either in the Key or Value - see other flags)
-  -w, --workspace string                Name of the Workspace in TF Enterprise (version 2)
+  -w, --workspace string                [optional] Name of the Workspace in TF Enterprise (version 2)
 ```
 
 ## License

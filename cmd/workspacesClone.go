@@ -38,25 +38,25 @@ var cloneCmd = &cobra.Command{
 	Args:  cobra.ExactArgs(0),
 	Run: func(cmd *cobra.Command, args []string) {
 		if organization == "" {
-			fmt.Println("Error: The 'organization' flag is required\n")
+			fmt.Println("Error: The 'organization' flag is required")
 			os.Exit(1)
 		}
 		if sourceWorkspace == "" {
-			fmt.Println("Error: The 'source-workspace' flag is required\n")
+			fmt.Println("Error: The 'source-workspace' flag is required")
 			os.Exit(1)
 		}
 		if newWorkspace == "" {
-			fmt.Println("Error: The 'new-workspace' flag is required\n")
+			fmt.Println("Error: The 'new-workspace' flag is required")
 			os.Exit(1)
 		}
 		if differentDestinationAccount {
 
 		    if newOrganization == "" {
-			    fmt.Println("Error: The 'new-organization' '-p' flag is required for a different destination account.\n")
+			    fmt.Println("Error: The 'new-organization' '-p' flag is required for a different destination account.")
 			    os.Exit(1)
 		    }
 		    if newVCSTokenID == "" {
-			    fmt.Println("Error: The 'new-vcs-token-id' '-v' flag is required for a different destination account.\n")
+			    fmt.Println("Error: The 'new-vcs-token-id' '-v' flag is required for a different destination account.")
 			    os.Exit(1)
 		    }
 		}
@@ -77,7 +77,7 @@ var cloneCmd = &cobra.Command{
 }
 
 func init() {
-	rootCmd.AddCommand(cloneCmd)
+	workspaceCmd.AddCommand(cloneCmd)
 	cloneCmd.Flags().StringVarP(
 		&organization,
 		"organization",

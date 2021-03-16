@@ -19,14 +19,16 @@ import (
 )
 
 // variablesCmd represents the top level command for variables
-var variablesCmd = &cobra.Command{
-	Use:   "variables",
-	Short: "Update or List variables",
-	Long:  `Top level command to update or lists variables in all workspaces`,
+var workspaceCmd = &cobra.Command{
+	Use:   "workspaces",
+	Short: "Clone or List workspaces",
+	Long:  `Top level command for reporting on workspace or cloning a workspace`,
 	Args:  cobra.MinimumNArgs(1),
 }
 
 func init() {
-	rootCmd.AddCommand(variablesCmd)
+	rootCmd.AddCommand(workspaceCmd)
 }
+
+
 

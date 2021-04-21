@@ -17,36 +17,38 @@ package cmd
 import (
 	"fmt"
 	"os"
+
 	cloner "github.com/silinternational/tfc-ops/lib"
 	"github.com/spf13/cobra"
 )
 
-var copyState bool
-var copyVariables bool
-var differentDestinationAccount bool
-var organization string
-var newOrganization string
-var sourceWorkspace string
-var newWorkspace string
-var newVCSTokenID string
+var (
+	copyState                   bool
+	copyVariables               bool
+	differentDestinationAccount bool
+	newOrganization             string
+	sourceWorkspace             string
+	newWorkspace                string
+	newVCSTokenID               string
+)
 
 // cloneCmd represents the clone command
 var cloneCmd = &cobra.Command{
 	Use:   "clone",
 	Short: "Clone a V2 Workspace",
-	Long: `Clone a TF Enterprise Version 2 Workspace`,
+	Long:  `Clone a TF Enterprise Version 2 Workspace`,
 	Args:  cobra.ExactArgs(0),
 	Run: func(cmd *cobra.Command, args []string) {
 		if differentDestinationAccount {
 
-		    if newOrganization == "" {
-			    fmt.Println("Error: The 'new-organization' '-p' flag is required for a different destination account.")
-			    os.Exit(1)
-		    }
-		    if newVCSTokenID == "" {
-			    fmt.Println("Error: The 'new-vcs-token-id' '-v' flag is required for a different destination account.")
-			    os.Exit(1)
-		    }
+			if newOrganization == "" {
+				fmt.Println("Error: The 'new-organization' '-p' flag is required for a different destination account.")
+				os.Exit(1)
+			}
+			if newVCSTokenID == "" {
+				fmt.Println("Error: The 'new-vcs-token-id' '-v' flag is required for a different destination account.")
+				os.Exit(1)
+			}
 		}
 
 		config := cloner.V2CloneConfig{
@@ -67,13 +69,6 @@ var cloneCmd = &cobra.Command{
 func init() {
 	workspaceCmd.AddCommand(cloneCmd)
 	cloneCmd.Flags().StringVarP(
-		&organization,
-		"organization",
-		"o",
-		"",
-		`Name of the Organization in TF Enterprise (version 2)`,
-	)
-	cloneCmd.Flags().StringVarP(
 		&newOrganization,
 		"new-organization",
 		"p",
@@ -82,17 +77,17 @@ func init() {
 	)
 	cloneCmd.Flags().StringVarP(
 		&sourceWorkspace,
-			"source-workspace",
-			"s",
-			"",
-			`Name of the Source Workspace in TF Enterprise (version 2)`,
+		"source-workspace",
+		"s",
+		"",
+		requiredPrefix+`Name of the Source Workspace in TF Enterprise (version 2)`,
 	)
 	cloneCmd.Flags().StringVarP(
 		&newWorkspace,
 		"new-workspace",
 		"n",
 		"",
-		`Name of the new Workspace in TF Enterprise (version 2)`,
+		requiredPrefix+`Name of the new Workspace in TF Enterprise (version 2)`,
 	)
 	cloneCmd.Flags().StringVarP(
 		&newVCSTokenID,
@@ -122,16 +117,20 @@ func init() {
 		false,
 		`optional (e.g. "-d=true") whether to clone to a different TF account.`,
 	)
-	cloneCmd.MarkFlagRequired("organization")
 	cloneCmd.MarkFlagRequired("source-workspace")
 	cloneCmd.MarkFlagRequired("new-workspace")
 }
 
 func runClone(cfg cloner.V2CloneConfig) {
+	cfg.AtlasTokenDestination = os.Getenv("ATLAS_TOKEN_DESTINATION")
+	if cfg.AtlasTokenDestination == "" {
+		cfg.AtlasTokenDestination = atlasToken
+		fmt.Print("Info: ATLAS_TOKEN_DESTINATION is not set, using ATLAS_TOKEN for destination account.\n\n")
+	}
+
 	fmt.Printf("clone called using %s, %s, %s, copyState: %t, copyVariables: %t, differentDestinationAccount: %t\n",
 		cfg.Organization, cfg.SourceWorkspace, cfg.NewWorkspace, cfg.CopyState, cfg.CopyVariables, cfg.DifferentDestinationAccount)
 	cfg.AtlasToken = atlasToken
-	cfg.AtlasTokenDestination = atlasTokenDestination
 
 	sensitiveVars, err := cloner.CloneV2Workspace(cfg)
 	if err != nil {
@@ -146,5 +145,4 @@ func runClone(cfg cloner.V2CloneConfig) {
 			println(nextVar)
 		}
 	}
-
 }

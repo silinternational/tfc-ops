@@ -2,24 +2,26 @@ package cmd
 
 import (
 	"fmt"
-	"os"
 	"log"
+	"os"
 	"strings"
 
-	"github.com/spf13/cobra"
 	"github.com/manifoldco/promptui"
+	"github.com/spf13/cobra"
 
 	api "github.com/silinternational/tfc-ops/lib"
 	updater "github.com/silinternational/tfc-ops/lib"
 )
 
-var workspace string
-var variableSearchString string
-var newVariableValue string
-var searchOnVariableValue bool
-var addKeyIfNotFound bool
-var dryRunMode bool
-var sensitiveVariable bool
+var (
+	workspace             string
+	variableSearchString  string
+	newVariableValue      string
+	searchOnVariableValue bool
+	addKeyIfNotFound      bool
+	dryRunMode            bool
+	sensitiveVariable     bool
+)
 
 // cloneCmd represents the clone command
 var updateCmd = &cobra.Command{
@@ -43,9 +45,9 @@ var updateCmd = &cobra.Command{
 			DryRunMode:            dryRunMode,
 			SensitiveVariable:     sensitiveVariable,
 		}
-		if workspace == ""{
+		if workspace == "" {
 			runVariablesUpdateAll(config)
-		}else{
+		} else {
 			runVariablesUpdate(config)
 		}
 	},
@@ -53,13 +55,6 @@ var updateCmd = &cobra.Command{
 
 func init() {
 	variablesCmd.AddCommand(updateCmd)
-	updateCmd.Flags().StringVarP(
-		&organization,
-		"organization",
-		"o",
-		"",
-		`Name of the Organization in TF Enterprise (version 2)`,
-	)
 	updateCmd.Flags().StringVarP(
 		&workspace,
 		"workspace",
@@ -72,14 +67,14 @@ func init() {
 		"variable-search-string",
 		"s",
 		"",
-		`The string to match in the current variables (either in the Key or Value - see other flags)`,
+		requiredPrefix+`The string to match in the current variables (either in the Key or Value - see other flags)`,
 	)
 	updateCmd.Flags().StringVarP(
 		&newVariableValue,
 		"new-variable-value",
 		"n",
 		"",
-		`The desired new value of the variable`,
+		requiredPrefix+`The desired new value of the variable`,
 	)
 	updateCmd.Flags().BoolVarP(
 		&addKeyIfNotFound,
@@ -109,7 +104,6 @@ func init() {
 		false,
 		`optional (e.g. "-x=true") make the variable sensitive.`,
 	)
-	updateCmd.MarkFlagRequired("organization")
 	updateCmd.MarkFlagRequired("variable-search-string")
 	updateCmd.MarkFlagRequired("new-variable-value")
 }
@@ -138,10 +132,9 @@ func runVariablesUpdate(cfg updater.V2UpdateConfig) {
 
 	println("\n  **** Completed Updating ****")
 	println(message)
-
 }
 
-func runVariablesUpdateAll(cfg updater.V2UpdateConfig){
+func runVariablesUpdateAll(cfg updater.V2UpdateConfig) {
 	allData, err := api.GetV2AllWorkspaceData(organization, atlasToken)
 	for _, ws := range allData {
 		value, err := ws.AttributeByLabel(strings.Trim("name", " "))

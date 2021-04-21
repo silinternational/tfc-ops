@@ -23,15 +23,19 @@ import (
 	"github.com/spf13/viper"
 )
 
-var cfgFile string
-var atlasToken string
-var atlasTokenDestination string
+const requiredPrefix = "required - "
+
+var (
+	cfgFile      string
+	atlasToken   string
+	organization string
+)
 
 // rootCmd represents the base command when called without any subcommands
 var rootCmd = &cobra.Command{
 	Use:   "terraform-cloud-ops",
 	Short: "Terraform Cloud operations",
-	Long: `Perform TF Cloud operations, e.g. clone a workspace or search for variables within a workspace`,
+	Long:  `Perform TF Cloud operations, e.g. clone a workspace or search for variables within a workspace`,
 	// Uncomment the following line if your bare application
 	// has an action associated with it:
 	//	Run: func(cmd *cobra.Command, args []string) { },
@@ -52,11 +56,15 @@ func init() {
 	// Here you will define your flags and configuration settings.
 	// Cobra supports persistent flags, which, if defined here,
 	// will be global for your application.
-	//rootCmd.PersistentFlags().StringVar(&cfgFile, "config", "", "config file (default is $HOME/.terraform-enterprise-migrator.yaml)")
+	rootCmd.PersistentFlags().StringVarP(&organization, "organization",
+		"o", "", requiredPrefix+"Name of Terraform Enterprise Organization")
+	if err := rootCmd.MarkPersistentFlagRequired("organization"); err != nil {
+		panic("MarkPersistentFlagRequired failed with error " + err.Error())
+	}
 
 	// Cobra also supports local flags, which will only run
 	// when this action is called directly.
-	//rootCmd.Flags().BoolP("toggle", "t", false, "Help message for toggle")
+	// rootCmd.Flags().BoolP("toggle", "t", false, "Help message for toggle")
 
 	foundError := false
 
@@ -71,13 +79,6 @@ func init() {
 	if foundError {
 		os.Exit(1)
 	}
-
-	atlasTokenDestination = os.Getenv("ATLAS_TOKEN_DESTINATION")
-	if atlasTokenDestination == "" {
-		atlasTokenDestination = atlasToken
-		fmt.Println("Info: ATLAS_TOKEN_DESTINATION is not set, Using ATLAS_TOKEN for destination account.\n")
-	}
-
 }
 
 // initConfig reads in config file and ENV variables if set.

@@ -933,7 +933,7 @@ func UpdateWorkspace(params WorkspaceUpdateParams) {
 		bodyBytes, _ := ioutil.ReadAll(resp.Body)
 		_ = resp.Body.Close()
 
-		fmt.Printf(`set "%s" to "%s" on workspace %s\n`, params.Attribute, params.Value, name)
+		fmt.Printf("set '%s' to '%s' on workspace %s\n", params.Attribute, params.Value, name)
 		if params.Debug {
 			fmt.Printf("response:\n    %s\n", bodyBytes)
 		}

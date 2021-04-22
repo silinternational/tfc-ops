@@ -26,8 +26,9 @@ import (
 const requiredPrefix = "required - "
 
 var (
-	cfgFile      string
 	atlasToken   string
+	cfgFile      string
+	debug        bool
 	organization string
 )
 
@@ -53,9 +54,6 @@ func Execute() {
 func init() {
 	cobra.OnInitialize(initConfig)
 
-	// Here you will define your flags and configuration settings.
-	// Cobra supports persistent flags, which, if defined here,
-	// will be global for your application.
 	rootCmd.PersistentFlags().StringVarP(&organization, "organization",
 		"o", "", requiredPrefix+"Name of Terraform Enterprise Organization")
 	if err := rootCmd.MarkPersistentFlagRequired("organization"); err != nil {
@@ -74,6 +72,11 @@ func init() {
 		fmt.Println("Error: Environment variable for ATLAS_TOKEN is required to execute plan and migration")
 		fmt.Println("")
 		foundError = true
+	}
+
+	debugStr := os.Getenv("TFC_OPS_DEBUG")
+	if debugStr == "TRUE" || debugStr == "true" {
+		debug = true
 	}
 
 	if foundError {

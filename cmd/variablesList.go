@@ -18,13 +18,16 @@ import (
 	"fmt"
 	"os"
 	"text/tabwriter"
+
 	"github.com/spf13/cobra"
 
 	api "github.com/silinternational/tfc-ops/lib"
 )
 
-var keyContains string
-var valueContains string
+var (
+	keyContains   string
+	valueContains string
+)
 
 var variablesListCmd = &cobra.Command{
 	Use:   "list",
@@ -63,8 +66,6 @@ var variablesListCmd = &cobra.Command{
 
 func init() {
 	variablesCmd.AddCommand(variablesListCmd)
-	variablesListCmd.Flags().StringVarP(&organization, "organization", "o", "",
-		"required - Name of Terraform Enterprise Organization")
 	variablesListCmd.Flags().StringVarP(&keyContains, "key_contains", "k", "",
 		"required if value_contains is blank - string contained in the Terraform variable keys to report on")
 	variablesListCmd.Flags().StringVarP(&valueContains, "value_contains", "v", "",
@@ -72,7 +73,6 @@ func init() {
 	variablesListCmd.Flags().StringVarP(&workspace, "workspace", "w", "",
 		`Name of the Workspace in TF Enterprise`,
 	)
-	variablesListCmd.MarkFlagRequired("organization")
 }
 
 func runVariablesList() {
@@ -111,7 +111,7 @@ func printWorkspaceVars(ws string, vs []api.V2Var) {
 	w := tabwriter.NewWriter(os.Stdout, 0, 0, 1, ' ', tabwriter.Debug)
 	println()
 	fmt.Printf("Workspace: %s has %v matching variable(s)\n", ws, len(vs))
-	fmt.Fprintln(w, "Key \t Value \t Sensitive",)
+	fmt.Fprintln(w, "Key \t Value \t Sensitive")
 	for _, v := range vs {
 		sens := ""
 		if v.Sensitive {

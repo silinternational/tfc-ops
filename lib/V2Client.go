@@ -16,14 +16,15 @@ package lib
 
 import (
 	"bytes"
-	//"io/ioutil"
 	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
+	"io/ioutil"
 	"os"
 	"os/exec"
 	"strings"
+	"text/tabwriter"
 	"time"
 )
 
@@ -51,15 +52,6 @@ type V2CloneConfig struct {
 	CopyState                   bool
 	CopyVariables               bool
 	DifferentDestinationAccount bool
-}
-
-// V2Workspace holds the information needed to create a v2 terraform workspace
-type V2Workspace struct {
-	Name         string
-	TFVersion    string
-	VCSRepoID    string
-	VCSBranch    string
-	TFWorkingDir string
 }
 
 // V2Var is what is returned by the api for one variable
@@ -220,18 +212,15 @@ type TFVar struct {
 	Sensitive bool   `json:"sensitive"`
 }
 
-// TFConfig matches the json return value of the v1 terraform configurations api
-type TFConfig struct {
-	Version struct {
-		Version  int `json:"version"`
-		Metadata struct {
-			Foo string `json:"foo"`
-		} `json:"metadata"`
-		TfVars    []TFVar           `json:"tf_vars"`
-		Variables map[string]string `json:"variables"`
-	} `json:"version"`
+type WorkspaceUpdateParams struct {
+	Organization    string
+	WorkspaceFilter string
+	Token           string
+	Attribute       string
+	Value           string
+	DryRunMode      bool
+	Debug           bool
 }
-
 
 // ConvertHCLVariable changes a TFVar struct in place by escaping
 //  the double quotes and line endings in the Value attribute
@@ -897,3 +886,99 @@ func getVCSToken(vcsUsername, orgName, tfToken string) (string, error) {
 	return vcsTokenID, nil
 }
 
+// UpdateWorkspace updates one attribute of one or more Terraform Cloud workspaces.
+func UpdateWorkspace(params WorkspaceUpdateParams) {
+	if err := validateUpdateWorkspaceParams(params); err != nil {
+		fmt.Println(err.Error())
+		return
+	}
+
+	foundWs, err := FindWorkspaces(params.Organization, params.Token, params.WorkspaceFilter)
+	if err != nil {
+		fmt.Printf("error listing workspaces: %s\n", err)
+		return
+	}
+	if len(foundWs) == 0 {
+		fmt.Printf("no workspaces found matching the filter '%s'\n", params.WorkspaceFilter)
+		return
+	}
+
+	if params.DryRunMode {
+		w := tabwriter.NewWriter(os.Stdout, 0, 0, 1, ' ', 0)
+		_, _ = fmt.Fprintln(w, "organization:\t", params.Organization)
+		_, _ = fmt.Fprintln(w, "workspace filter:\t", params.WorkspaceFilter)
+		_, _ = fmt.Fprintln(w, "attribute:\t", params.Attribute)
+		_, _ = fmt.Fprintln(w, "value:\t", params.Value)
+		_ = w.Flush()
+		fmt.Println("workspaces:")
+		for _, val := range foundWs {
+			fmt.Println("    " + val)
+		}
+		return
+	}
+
+	headers := map[string]string{
+		"Authorization": "Bearer " + params.Token,
+		"Content-Type":  "application/vnd.api+json",
+	}
+	postData := fmt.Sprintf(`{"data":{"type":"workspace","attributes":{"%s":"%s"}}}`,
+		params.Attribute, params.Value)
+
+	for id, name := range foundWs {
+		url := fmt.Sprintf(baseURLv2+"/workspaces/%s", id)
+		resp := CallAPI("PATCH", url, postData, headers)
+		bodyBytes, _ := ioutil.ReadAll(resp.Body)
+		_ = resp.Body.Close()
+
+		fmt.Printf(`set "%s" to "%s" on workspace %s\n`, params.Attribute, params.Value, name)
+		if params.Debug {
+			fmt.Printf("response:\n    %s\n", bodyBytes)
+		}
+	}
+}
+
+func validateUpdateWorkspaceParams(params WorkspaceUpdateParams) error {
+	if params.Debug {
+		fmt.Printf("params:\n    %#v\n", params)
+	}
+
+	validWorkspaceAttributes := []string{"terraform-version"}
+	if !IsStringInSlice(params.Attribute, validWorkspaceAttributes) {
+		return fmt.Errorf("'%s' is not a valid workspace attribute\n", params.Attribute)
+	}
+
+	if len(params.WorkspaceFilter) < 3 {
+		return fmt.Errorf("workspace filter must be at least 3 characters, given: '%s'", params.WorkspaceFilter)
+	}
+
+	return nil
+}
+
+// FindWorkspaces retrieves the full list of workspaces from Terraform Cloud and searches for any that
+// match the workspaceFilter by the workspace name. The list is returned as a map with the ID in the key
+// and the name in the value.
+func FindWorkspaces(organization, token, workspaceFilter string) (map[string]string, error) {
+	wsData, err := GetV2AllWorkspaceData(organization, token)
+	if err != nil {
+		return nil, fmt.Errorf("error getting workspace data: %s", err)
+	}
+	foundWs := map[string]string{}
+	for _, ws := range wsData {
+		if strings.Contains(ws.Attributes.Name, workspaceFilter) {
+			foundWs[ws.ID] = ws.Attributes.Name
+		}
+	}
+	return foundWs, nil
+}
+
+// IsStringInSlice iterates over a slice of strings, looking for the given
+// string. If found, true is returned. Otherwise, false is returned.
+func IsStringInSlice(needle string, haystack []string) bool {
+	for _, hs := range haystack {
+		if needle == hs {
+			return true
+		}
+	}
+
+	return false
+}

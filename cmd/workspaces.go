@@ -21,14 +21,11 @@ import (
 // variablesCmd represents the top level command for variables
 var workspaceCmd = &cobra.Command{
 	Use:   "workspaces",
-	Short: "Clone or List workspaces",
-	Long:  `Top level command for reporting on workspace or cloning a workspace`,
+	Short: "Clone, List, or Update workspaces",
+	Long:  `Top level command for describing or updating workspaces or cloning a workspace`,
 	Args:  cobra.MinimumNArgs(1),
 }
 
 func init() {
 	rootCmd.AddCommand(workspaceCmd)
 }
-
-
-

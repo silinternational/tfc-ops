@@ -28,6 +28,8 @@ import (
 	"time"
 )
 
+const baseURLv2 = "https://app.terraform.io/api/v2"
+
 type V2UpdateConfig struct {
 	Organization          string
 	NewOrganization       string
@@ -290,8 +292,7 @@ func GetUpdateV2VariablePayload(organization, workspaceName, variableID string, 
 }
 
 func GetV2AllWorkspaceData(organization, tfToken string) ([]V2WorkspaceData, error) {
-
-	baseURL := fmt.Sprintf("https://app.terraform.io/api/v2/organizations/%s/workspaces?page%%5Bnumber%%5D=", organization)
+	baseURL := fmt.Sprintf(baseURLv2+"/organizations/%s/workspaces?page%%5Bnumber%%5D=", organization)
 
 	headers := map[string]string{
 		"Authorization": "Bearer " + tfToken,
@@ -326,7 +327,7 @@ func GetV2AllWorkspaceData(organization, tfToken string) ([]V2WorkspaceData, err
 func GetV2WorkspaceData(organization, workspaceName, tfToken string) (V2WorkspaceJSON, error) {
 
 	url := fmt.Sprintf(
-		"https://app.terraform.io/api/v2/organizations/%s/workspaces/%s",
+		baseURLv2+"/organizations/%s/workspaces/%s",
 		organization,
 		workspaceName,
 	)
@@ -338,8 +339,8 @@ func GetV2WorkspaceData(organization, workspaceName, tfToken string) (V2Workspac
 	resp := CallAPI("GET", url, "", headers)
 
 	defer resp.Body.Close()
-	//bodyBytes, _ := ioutil.ReadAll(resp.Body)
-	//fmt.Println(string(bodyBytes))
+	// bodyBytes, _ := ioutil.ReadAll(resp.Body)
+	// fmt.Println(string(bodyBytes))
 
 	var v2WsData V2WorkspaceJSON
 
@@ -352,9 +353,8 @@ func GetV2WorkspaceData(organization, workspaceName, tfToken string) (V2Workspac
 
 //  GetVarsFromV2 returns a list of Terraform variables for a given workspace
 func GetVarsFromV2(organization, workspaceName, tfToken string) ([]V2Var, error) {
-
 	url := fmt.Sprintf(
-		"https://app.terraform.io/api/v2/vars?filter%%5Borganization%%5D%%5Bname%%5D=%s&filter%%5Bworkspace%%5D%%5Bname%%5D=%s",
+		baseURLv2+"/vars?filter%%5Borganization%%5D%%5Bname%%5D=%s&filter%%5Bworkspace%%5D%%5Bname%%5D=%s",
 		organization,
 		workspaceName,
 	)
@@ -401,7 +401,6 @@ func GetAllWorkSpacesVarsFromV2(wsData []V2WorkspaceData, organization, keyConta
 }
 
 func GetMatchingVarsFromV2(organization string, wsName string, tfToken string, keyContains string, valueContains string) ([]V2Var, error) {
-
 	vars, err := GetVarsFromV2(organization, wsName, tfToken)
 	if err != nil {
 		err := fmt.Errorf("Error getting variables for %s:%s\n%s", organization, wsName, err.Error())
@@ -426,7 +425,7 @@ func GetMatchingVarsFromV2(organization string, wsName string, tfToken string, k
 // GetTeamAccessFromV2 returns the team access data from an existing workspace
 func GetTeamAccessFromV2(workspaceID, tfToken string) (AllTeamWorkspaceData, error) {
 	url := fmt.Sprintf(
-		"https://app.terraform.io/api/v2/team-workspaces?filter%%5Bworkspace%%5D%%5Bid%%5D=%s",
+		baseURLv2+"/team-workspaces?filter%%5Bworkspace%%5D%%5Bid%%5D=%s",
 		workspaceID,
 	)
 
@@ -477,7 +476,7 @@ func getAssignTeamAccessPayload(accessLevel, workspaceID, teamID string) string 
 
 // AssignTeamAccessOnV2 assigns the requested team access to a workspace on Terraform Enterprise V.2
 func AssignTeamAccessOnV2(workspaceID, tfToken string, allTeamData AllTeamWorkspaceData) {
-	url := fmt.Sprintf("https://app.terraform.io/api/v2/team-workspaces")
+	url := fmt.Sprintf(baseURLv2 + "/team-workspaces")
 
 	headers := map[string]string{
 		"Authorization": "Bearer " + tfToken,
@@ -500,7 +499,7 @@ func AssignTeamAccessOnV2(workspaceID, tfToken string, allTeamData AllTeamWorksp
 // CreateV2Variable makes a v2 terraform vars api post to create a variable
 // for a given organization and v2 workspace
 func CreateV2Variable(organization, workspaceName, tfToken string, tfVar TFVar) {
-	url := "https://app.terraform.io/api/v2/vars"
+	url := baseURLv2 + "/vars"
 
 	ConvertHCLVariable(&tfVar)
 
@@ -553,7 +552,7 @@ func GetCreateV2WorkspacePayload(oc OpsConfig, vcsTokenID string) string {
 // UpdateV2Variable makes a v2 terraform vars api post to update a variable
 // for a given organization and v2 workspace
 func UpdateV2Variable(organization, workspaceName, variableID, tfToken string, tfVar TFVar) {
-	url := fmt.Sprintf("https://app.terraform.io/api/v2/vars/%s", variableID)
+	url := fmt.Sprintf(baseURLv2+"/vars/%s", variableID)
 
 	ConvertHCLVariable(&tfVar)
 
@@ -578,7 +577,7 @@ func CreateV2Workspace(
 	tfToken, vcsTokenID string,
 ) (string, error) {
 	url := fmt.Sprintf(
-		"https://app.terraform.io/api/v2/organizations/%s/workspaces",
+		baseURLv2+"/organizations/%s/workspaces",
 		oc.NewOrg,
 	)
 
@@ -601,7 +600,6 @@ func CreateV2Workspace(
 	}
 	return v2WsData.Data.ID, nil
 }
-
 
 // RunTFInit ...
 //  - removes old terraform.tfstate files
@@ -683,13 +681,11 @@ func RunTFInit(oc OpsConfig, tfToken, tfTokenDestination string) error {
 	return nil
 }
 
-
 // CloneV2Workspace gets the data, variables and team access data for an existing Terraform Enterprise workspace
 //  and then creates a clone of it with the same data.
 // If the copyVariables param is set to true, then all the non-sensitive variable values will be added to the new
 //   workspace.  Otherwise, they will be set to "REPLACE_THIS_VALUE"
 func CloneV2Workspace(cfg V2CloneConfig) ([]string, error) {
-
 	v2WsData, err := GetV2WorkspaceData(cfg.Organization, cfg.SourceWorkspace, cfg.AtlasToken)
 	if err != nil {
 		return []string{}, err
@@ -860,13 +856,13 @@ type OAuthTokens struct {
 }
 
 func getVCSToken(vcsUsername, orgName, tfToken string) (string, error) {
-	url := fmt.Sprintf("https://app.terraform.io/api/v2/organizations/%s/oauth-tokens", orgName)
+	url := fmt.Sprintf(baseURLv2+"/organizations/%s/oauth-tokens", orgName)
 	headers := map[string]string{"Authorization": "Bearer " + tfToken}
 	resp := CallAPI("GET", url, "", headers)
 
 	defer resp.Body.Close()
-	//bodyBytes, _ := ioutil.ReadAll(resp.Body)
-	//fmt.Println(string(bodyBytes))
+	// bodyBytes, _ := ioutil.ReadAll(resp.Body)
+	// fmt.Println(string(bodyBytes))
 
 	var oauthTokens OAuthTokens
 

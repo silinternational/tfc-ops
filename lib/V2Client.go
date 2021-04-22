@@ -303,16 +303,9 @@ func GetV2AllWorkspaceData(organization, tfToken string) ([]V2WorkspaceData, err
 
 	for page := 1; ; page++ {
 		url := fmt.Sprintf("%s%d", baseURL, page)
-		resp := CallAPI("GET", url, "", headers)
-
-		defer resp.Body.Close()
-		//bodyBytes, _ := ioutil.ReadAll(resp.Body)
-		//fmt.Println(string(bodyBytes))
-
-		var nextWsData AllV2WorkspacesJSON
-
-		if err := json.NewDecoder(resp.Body).Decode(&nextWsData); err != nil {
-			return []V2WorkspaceData{}, fmt.Errorf("Error getting all workspaces' data for %s:%s\n%s", organization, err.Error())
+		nextWsData, err := getWorkspacePage(url, headers)
+		if err != nil {
+			return []V2WorkspaceData{}, fmt.Errorf("error getting workspace data for %s: %s", organization, err)
 		}
 		allWsData = append(allWsData, nextWsData.Data...)
 
@@ -324,8 +317,22 @@ func GetV2AllWorkspaceData(organization, tfToken string) ([]V2WorkspaceData, err
 	return allWsData, nil
 }
 
-func GetV2WorkspaceData(organization, workspaceName, tfToken string) (V2WorkspaceJSON, error) {
+func getWorkspacePage(url string, headers map[string]string) (AllV2WorkspacesJSON, error) {
+	resp := CallAPI("GET", url, "", headers)
 
+	defer resp.Body.Close()
+	// bodyBytes, _ := ioutil.ReadAll(resp.Body)
+	// fmt.Println(string(bodyBytes))
+
+	var nextWsData AllV2WorkspacesJSON
+
+	if err := json.NewDecoder(resp.Body).Decode(&nextWsData); err != nil {
+		return AllV2WorkspacesJSON{}, fmt.Errorf("json decode error: %s", err)
+	}
+	return nextWsData, nil
+}
+
+func GetV2WorkspaceData(organization, workspaceName, tfToken string) (V2WorkspaceJSON, error) {
 	url := fmt.Sprintf(
 		baseURLv2+"/organizations/%s/workspaces/%s",
 		organization,

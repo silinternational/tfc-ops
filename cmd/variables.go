@@ -1,4 +1,4 @@
-// Copyright © 2018 NAME HERE <EMAIL ADDRESS>
+// Copyright © 2018-2021 SIL International
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -29,4 +29,3 @@ var variablesCmd = &cobra.Command{
 func init() {
 	rootCmd.AddCommand(variablesCmd)
 }
-

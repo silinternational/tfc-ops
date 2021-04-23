@@ -1,4 +1,4 @@
-// Copyright © 2018 NAME HERE <EMAIL ADDRESS>
+// Copyright © 2018-2021 SIL International
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -26,16 +26,17 @@ import (
 const requiredPrefix = "required - "
 
 var (
-	cfgFile      string
 	atlasToken   string
+	cfgFile      string
+	debug        bool
 	organization string
 )
 
 // rootCmd represents the base command when called without any subcommands
 var rootCmd = &cobra.Command{
-	Use:   "terraform-cloud-ops",
+	Use:   "tfc-ops",
 	Short: "Terraform Cloud operations",
-	Long:  `Perform TF Cloud operations, e.g. clone a workspace or search for variables within a workspace`,
+	Long:  `Perform TF Cloud operations, e.g. clone a workspace or manage variables within a workspace`,
 	// Uncomment the following line if your bare application
 	// has an action associated with it:
 	//	Run: func(cmd *cobra.Command, args []string) { },
@@ -53,9 +54,6 @@ func Execute() {
 func init() {
 	cobra.OnInitialize(initConfig)
 
-	// Here you will define your flags and configuration settings.
-	// Cobra supports persistent flags, which, if defined here,
-	// will be global for your application.
 	rootCmd.PersistentFlags().StringVarP(&organization, "organization",
 		"o", "", requiredPrefix+"Name of Terraform Enterprise Organization")
 	if err := rootCmd.MarkPersistentFlagRequired("organization"); err != nil {
@@ -74,6 +72,11 @@ func init() {
 		fmt.Println("Error: Environment variable for ATLAS_TOKEN is required to execute plan and migration")
 		fmt.Println("")
 		foundError = true
+	}
+
+	debugStr := os.Getenv("TFC_OPS_DEBUG")
+	if debugStr == "TRUE" || debugStr == "true" {
+		debug = true
 	}
 
 	if foundError {

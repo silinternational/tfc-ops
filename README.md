@@ -7,6 +7,8 @@ to the new one. It can also be used for listing workspaces and listing or modify
 https://app.terraform.io/app/settings/tokens and generating a new token.
 - `ATLAS_TOKEN_DESTINATION` - Only necessary if cloning to a new organization in TF Cloud.
 
+## Optional ENV vars
+- `TFC_OPS_DEBUG` - Set to `true` to enable debug output
 
 ## Installation
 There are three ways to download/install this script:
@@ -62,18 +64,19 @@ Usage:
 
 Available Commands:
   help        Help about any command
-  variables   Operations and reports related to variables
-  workspaces  Operations and reports related to workspaces
+  variables   Update or List variables
+  workspaces  Clone, List, or Update workspaces
 
 Flags:
-  -h, --help   help for tfc-ops
+  -h, --help                  help for tfc-ops
+  -o, --organization string   required - Name of Terraform Enterprise Organization
 
 Use "tfc-ops [command] --help" for more information about a command.
 ```
 
 ### Workspaces Help
 ```text
-Top Level Command for the following sub-commands
+Top level command for describing or updating workspaces or cloning a workspace
 
 Usage:
   tfc-ops workspaces [command]
@@ -81,9 +84,15 @@ Usage:
 Available Commands:
   clone       Clone a V2 Workspace
   list        List Workspaces
+  update      Update Workspaces
 
 Flags:
   -h, --help   help for workspaces
+
+Global Flags:
+  -o, --organization string   required - Name of Terraform Enterprise Organization
+
+Use "tfc-ops [command] --help" for more information about a command.
 ```
 
 
@@ -93,18 +102,20 @@ $ tfc-ops workspaces clone -h
 Clone a TF Enterprise Version 2 Workspace
 
 Usage:
-  tfc-ops clone [flags]
+  tfc-ops workspaces clone [flags]
 
 Flags:
-  -t, --copyState                     [optional] (e.g. "-t=true") whether to copy the state of the Source Workspace (only possible if copying to a new account).
-  -c, --copyVariables                 [optional] (e.g. "-c=true") whether to copy the values of the Source Workspace variables.
-  -d, --differentDestinationAccount   [optional] (e.g. "-d=true") whether to clone to a different TF account.
+  -t, --copyState                     optional (e.g. "-t=true") whether to copy the state of the Source Workspace (only possible if copying to a new account).
+  -c, --copyVariables                 optional (e.g. "-c=true") whether to copy the values of the Source Workspace variables.
+  -d, --differentDestinationAccount   optional (e.g. "-d=true") whether to clone to a different TF account.
   -h, --help                          help for clone
   -p, --new-organization string       Name of the Destination Organization in TF Enterprise (version 2)
-  -v, --new-vcs-token-id string       The new Organization's VCS repo's oauth-token-id
-  -n, --new-workspace string          Name of the new Workspace in TF Enterprise (version 2)
-  -o, --organization string           Name of the Organization in TF Enterprise (version 2)
-  -s, --source-workspace string       Name of the Source Workspace in TF Enterprise (version 2)
+  -v, --new-vcs-token-id string       The new organization's VCS repo's oauth-token-id
+  -n, --new-workspace string          required - Name of the new Workspace in TF Enterprise (version 2)
+  -s, --source-workspace string       required - Name of the Source Workspace in TF Enterprise (version 2)
+
+Global Flags:
+  -o, --organization string   required - Name of Terraform Enterprise Organization
 ```
 
 ### Workspace List Help
@@ -116,14 +127,35 @@ Usage:
   tfc-ops workspaces list [flags]
 
 Flags:
-  -a, --attributes string     [required] - Workspace attributes to list: id,name,createdat,environment,workingdirectory,terraformversion,vcsrepo
-  -h, --help                  help for list
-  -o, --organization string   [required] - Name of Terraform Enterprise Organization
+  -a, --attributes string   required - Workspace attributes to list: id,name,createdat,environment,workingdirectory,terraformversion,vcsrepo
+  -h, --help                help for list
+
+Global Flags:
+  -o, --organization string   required - Name of Terraform Enterprise Organization
+```
+
+### Workspace Update Help
+```text
+$ tfc-ops workspaces update -h
+Updates an attribute of Terraform workspaces
+
+Usage:
+  tfc-ops workspaces update [flags]
+
+Flags:
+  -a, --attribute string   required - Workspace attribute to update. Available options: terraform-version
+  -d, --dry-run-mode       dry run mode only. (e.g. "-d")
+  -h, --help               help for update
+  -v, --value string       required - Value
+  -w, --workspace string   required - Workspace filter
+
+Global Flags:
+  -o, --organization string   required - Name of Terraform Enterprise Organization
 ```
 
 ### Variables Help
 ```text
-Top Level Command for the following sub-commands
+Top level command to update or lists variables in all workspaces
 
 Usage:
   tfc-ops variables [command]
@@ -134,23 +166,29 @@ Available Commands:
 
 Flags:
   -h, --help   help for variables
+
+Global Flags:
+  -o, --organization string   required - Name of Terraform Enterprise Organization
+
+Use "tfc-ops variables [command] --help" for more information about a command.
 ```
 
 ### Variables List Help
 ```text
 $ tfc-ops variables -h
-
 Show the values of variables with a key or value containing a certain string
 
 Usage:
   tfc-ops variables list [flags]
 
 Flags:
-  -h, --help                    help for variables
-  -k, --key_contains string     [required] if value_contains is blank - string contained in the Terraform variable keys to report on
-  -o, --organization string     [required] - Name of Terraform Enterprise Organization
-  -v, --value_contains string   [required] if key_contains is blank - string contained in the Terraform variable values to report on
-  -w, --workspace string        [optional] Name of the Workspace in TF Enterprise
+  -h, --help                    help for list
+  -k, --key_contains string     required if value_contains is blank - string contained in the Terraform variable keys to report on
+  -v, --value_contains string   required if key_contains is blank - string contained in the Terraform variable values to report on
+  -w, --workspace string        Name of the Workspace in TF Enterprise
+
+Global Flags:
+  -o, --organization string   required - Name of Terraform Enterprise Organization
 ```
 
 ### Variables Update Help
@@ -162,14 +200,18 @@ Usage:
   tfc-ops variables update [flags]
 
 Flags:
-  -a, --add-key-if-not-found            [optional] (e.g. "-a=true") whether to add a new variable if a matching key is not found.
-  -d, --dry-run-mode                    [optional] (e.g. "-d=true") dry run mode only.
+  -a, --add-key-if-not-found            optional (e.g. "-a=true") whether to add a new variable if a matching key is not found.
+  -d, --dry-run-mode                    optional (e.g. "-d=true") dry run mode only.
   -h, --help                            help for update
-  -n, --new-variable-value string       The desired new value of the variable
-  -o, --organization string             Name of the Organization in TF Enterprise (version 2)
-  -v, --search-on-variable-value        [optional] (e.g. "-v=true") whether to do the search based on the value of the variables. (Must be false if add-key-if-not-found is true
-  -s, --variable-search-string string   The string to match in the current variables (either in the Key or Value - see other flags)
-  -w, --workspace string                [optional] Name of the Workspace in TF Enterprise (version 2)
+  -n, --new-variable-value string       required - The desired new value of the variable
+  -v, --search-on-variable-value        optional (e.g. "-v=true") whether to do the search based on the value of the variables. (Must be false if add-key-if-not-found is true
+  -x, --sensitive-variable              optional (e.g. "-x=true") make the variable sensitive.
+  -s, --variable-search-string string   required - The string to match in the current variables (either in the Key or Value - see other flags)
+  -w, --workspace string                Name of the Workspace in TF Enterprise (version 2)
+
+Global Flags:
+  -o, --organization string   required - Name of Terraform Enterprise Organization
+
 ```
 
 ## License

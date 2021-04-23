@@ -2,6 +2,7 @@ package lib
 
 import (
 	"fmt"
+	"io/ioutil"
 	"net/http"
 	"os"
 	"strings"
@@ -35,9 +36,10 @@ func CallAPI(method, url, postData string, headers map[string]string) *http.Resp
 		fmt.Println(err.Error())
 		os.Exit(1)
 	} else if resp.StatusCode >= 300 {
+		bodyBytes, _ := ioutil.ReadAll(resp.Body)
 		fmt.Println(fmt.Sprintf(
-			"API returned an error. \n\tMethod: %s, \n\tURL: %s, \n\tCode: %v, \n\tStatus: %s \n\tBody: %s",
-			method, url, resp.StatusCode, resp.Status, postData))
+			"API returned an error. \n\tMethod: %s, \n\tURL: %s, \n\tCode: %v, \n\tStatus: %s \n\tRequest Body: %s\n\tResponse Body: %s",
+			method, url, resp.StatusCode, resp.Status, postData, bodyBytes))
 		os.Exit(1)
 	}
 

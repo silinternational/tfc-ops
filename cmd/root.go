@@ -34,9 +34,9 @@ var (
 
 // rootCmd represents the base command when called without any subcommands
 var rootCmd = &cobra.Command{
-	Use:   "terraform-cloud-ops",
+	Use:   "tfc-ops",
 	Short: "Terraform Cloud operations",
-	Long:  `Perform TF Cloud operations, e.g. clone a workspace or search for variables within a workspace`,
+	Long:  `Perform TF Cloud operations, e.g. clone a workspace or manage variables within a workspace`,
 	// Uncomment the following line if your bare application
 	// has an action associated with it:
 	//	Run: func(cmd *cobra.Command, args []string) { },

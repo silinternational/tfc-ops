@@ -938,6 +938,7 @@ func UpdateWorkspace(params WorkspaceUpdateParams) {
 			fmt.Printf("response:\n    %s\n", bodyBytes)
 		}
 	}
+	fmt.Printf("Updated %d workspaces\n", len(foundWs))
 }
 
 func validateUpdateWorkspaceParams(params WorkspaceUpdateParams) error {

@@ -68,7 +68,7 @@ func init() {
 
 func runWorkspaceUpdate() {
 	lib.UpdateWorkspace(lib.WorkspaceUpdateParams{
-		Organization:    "gtis",
+		Organization:    organization,
 		WorkspaceFilter: workspaceFilter,
 		Token:           os.Getenv("ATLAS_TOKEN"),
 		Attribute:       attribute,

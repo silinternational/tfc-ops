@@ -5,3 +5,4 @@
 /terraform-enterprise-migrator
 /tfc-ops
 .idea/
+dist/

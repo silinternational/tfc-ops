@@ -917,6 +917,7 @@ func UpdateWorkspace(params WorkspaceUpdateParams) {
 		for _, val := range foundWs {
 			fmt.Println("    " + val)
 		}
+		fmt.Printf("Found %d workspace(s)\n", len(foundWs))
 		return
 	}
 

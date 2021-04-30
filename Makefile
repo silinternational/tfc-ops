@@ -1,5 +1,5 @@
-help:
-	@echo "To build, run \"goreleaser release --snapshot --skip-publish\" or for a full release push a new tag to \"origin\"."
+builddist:
+	goreleaser release --snapshot --skip-publish
 
 test:
 	go test -cover

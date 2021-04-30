@@ -1,5 +1,5 @@
-builddist:
-	gox -osarch="linux/amd64 linux/arm darwin/amd64 windows/amd64" -output="dist/{{.OS}}/{{.Arch}}/tfc-ops"
+help:
+	@echo "To build, run \"goreleaser release --snapshot --skip-publish\" or for a full release push a new tag to \"origin\"."
 
 test:
 	go test -cover

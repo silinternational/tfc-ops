@@ -17,9 +17,11 @@ package cmd
 import (
 	"fmt"
 	"os"
+	"strings"
+
+	"github.com/spf13/cobra"
 
 	"github.com/silinternational/tfc-ops/lib"
-	"github.com/spf13/cobra"
 )
 
 const (
@@ -50,7 +52,8 @@ func init() {
 	workspaceCmd.AddCommand(workspaceUpdateCmd)
 
 	workspaceUpdateCmd.Flags().StringVarP(&attribute, flagAttribute, "a", "",
-		requiredPrefix+"Workspace attribute to update. Available options: terraform-version")
+		requiredPrefix+"Workspace attribute to update. Available options: "+
+			strings.Join(lib.WorkspaceUpdateAttributes, ", "))
 	workspaceUpdateCmd.Flags().StringVarP(&value, flagValue, "v", "",
 		requiredPrefix+"Value")
 	workspaceUpdateCmd.Flags().StringVarP(&workspaceFilter, flagWorkspaceFilter, "w", "",

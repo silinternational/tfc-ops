@@ -101,12 +101,14 @@ type V2WorkspaceData struct {
 		CreatedAt        time.Time `json:"created-at"`
 		WorkingDirectory string    `json:"working-directory"`
 		VCSRepo          struct {
-			Branch  string `json:"branch"`
-			ID      string `json:"identifier"`
-			TokenID string `json:"oauth-token-id"`
+			Branch            string `json:"branch"`
+			Identifier        string `json:"identifier"`
+			DisplayIdentifier string `json:"display-identifier"`
+			TokenID           string `json:"oauth-token-id"`
 		} `json:"vcs-repo"`
-		TerraformVersion string `json:"terraform-version"`
-		Permissions      struct {
+		StructuredRunOutputEnabled bool   `json:"structured-run-output-enabled"`
+		TerraformVersion           string `json:"terraform-version"`
+		Permissions                struct {
 			CanUpdate         bool `json:"can-update"`
 			CanDestroy        bool `json:"can-destroy"`
 			CanQueueDestroy   bool `json:"can-queue-destroy"`
@@ -138,22 +140,58 @@ type V2WorkspaceData struct {
 	} `json:"links"`
 }
 
+const (
+	WsAttrID                   = "id"
+	WsAttrCreatedAt            = "created-at"
+	WsAttrEnvironment          = "environment"
+	WsAttrName                 = "name"
+	WsAttrStructuredRunOutput  = "structured-run-output-enabled"
+	WsAttrTerraformVersion     = "terraform-version"
+	WsAttrVcsDisplayIdentifier = "vcs-repo.display-identifier"
+	WsAttrVcsTokenID           = "vcs-repo.oauth-token-id"
+	WsAttrWorkingDirectory     = "working-directory"
+)
+
+// WorkspaceUpdateAttributes is a list of `V2WorkspaceData` attributes supported by the
+// `workspace update` command
+var WorkspaceUpdateAttributes = []string{WsAttrStructuredRunOutput, WsAttrTerraformVersion, WsAttrVcsTokenID}
+
+// WorkspaceListAttributes is a list of `V2WorkspaceData` attributes supported by the
+// `workspace list` command
+var WorkspaceListAttributes = []string{
+	WsAttrID, WsAttrCreatedAt, WsAttrEnvironment, WsAttrName, WsAttrStructuredRunOutput,
+	WsAttrTerraformVersion, WsAttrVcsDisplayIdentifier, WsAttrVcsTokenID, WsAttrWorkingDirectory,
+}
+
+// WorkspaceListAttributesDeprecated is a list of `V2WorkspaceData` attributes supported by the
+// `workspace list` command, but will be removed in a later version of this program.
+var WorkspaceListAttributesDeprecated = []string{
+	// deprecated attributes retained for backward compatibility
+	"createdat", "workingdirectory", "terraformversion", "vcsrepo",
+}
+
 func (v *V2WorkspaceData) AttributeByLabel(label string) (string, error) {
 	switch strings.ToLower(label) {
-	case "id":
+	case WsAttrID:
 		return v.ID, nil
-	case "name":
-		return v.Attributes.Name, nil
-	case "createdat":
+	case WsAttrCreatedAt, "createdat":
 		return v.Attributes.CreatedAt.String(), nil
-	case "environment":
+	case WsAttrEnvironment:
 		return v.Attributes.Environment, nil
-	case "workingdirectory":
-		return v.Attributes.WorkingDirectory, nil
-	case "terraformversion":
+	case WsAttrName:
+		return v.Attributes.Name, nil
+	case WsAttrStructuredRunOutput:
+		return fmt.Sprintf("%v", v.Attributes.StructuredRunOutputEnabled), nil
+	case WsAttrTerraformVersion, "terraformversion":
 		return v.Attributes.TerraformVersion, nil
 	case "vcsrepo":
-		return v.Attributes.VCSRepo.ID, nil
+		return v.Attributes.VCSRepo.Identifier, nil
+	case WsAttrVcsDisplayIdentifier:
+		return v.Attributes.VCSRepo.DisplayIdentifier, nil
+	case WsAttrVcsTokenID:
+		return v.Attributes.VCSRepo.TokenID, nil
+	case WsAttrWorkingDirectory, "workingdirectory":
+		return v.Attributes.WorkingDirectory, nil
 	}
 
 	return "", fmt.Errorf("Attribute label not valid: %s", label)
@@ -705,7 +743,7 @@ func CloneV2Workspace(cfg V2CloneConfig) ([]string, error) {
 
 	if !cfg.DifferentDestinationAccount {
 		cfg.NewOrganization = cfg.Organization
-		cfg.NewVCSTokenID = v2WsData.Data.Attributes.VCSRepo.ID
+		cfg.NewVCSTokenID = v2WsData.Data.Attributes.VCSRepo.Identifier
 	}
 
 	oc := OpsConfig{
@@ -714,7 +752,7 @@ func CloneV2Workspace(cfg V2CloneConfig) ([]string, error) {
 		NewOrg:           cfg.NewOrganization,
 		NewName:          cfg.NewWorkspace,
 		TerraformVersion: v2WsData.Data.Attributes.TerraformVersion,
-		RepoID:           v2WsData.Data.Attributes.VCSRepo.ID,
+		RepoID:           v2WsData.Data.Attributes.VCSRepo.Identifier,
 		Branch:           v2WsData.Data.Attributes.VCSRepo.Branch,
 		Directory:        v2WsData.Data.Attributes.WorkingDirectory,
 	}
@@ -918,16 +956,26 @@ func UpdateWorkspace(params WorkspaceUpdateParams) {
 			fmt.Println("    " + val)
 		}
 		fmt.Printf("Found %d workspace(s)\n", len(foundWs))
-		return
 	}
 
 	headers := map[string]string{
 		"Authorization": "Bearer " + params.Token,
 		"Content-Type":  "application/vnd.api+json",
 	}
-	postData := fmt.Sprintf(`{"data":{"type":"workspace","attributes":{"%s":"%s"}}}`,
-		params.Attribute, params.Value)
+	fmtStrings := map[string]string{
+		WsAttrStructuredRunOutput: `"structured-run-output-enabled":"%s"`,
+		WsAttrTerraformVersion:    `"terraform-version":"%s"`,
+		WsAttrVcsTokenID:          `"vcs-repo":{"oauth-token-id":"%s"}`,
+	}
+	postData := fmt.Sprintf(`{"data":{"type":"workspace","attributes":{`+fmtStrings[params.Attribute]+`}}}`,
+		params.Value)
 
+	if params.Debug {
+		fmt.Printf("request body:\n    %s\n", postData)
+	}
+	if params.DryRunMode {
+		return
+	}
 	for id, name := range foundWs {
 		url := fmt.Sprintf(baseURLv2+"/workspaces/%s", id)
 		resp := CallAPI("PATCH", url, postData, headers)
@@ -947,8 +995,7 @@ func validateUpdateWorkspaceParams(params WorkspaceUpdateParams) error {
 		fmt.Printf("params:\n    %#v\n", params)
 	}
 
-	validWorkspaceAttributes := []string{"terraform-version"}
-	if !IsStringInSlice(params.Attribute, validWorkspaceAttributes) {
+	if !IsStringInSlice(params.Attribute, WorkspaceUpdateAttributes) {
 		return fmt.Errorf("'%s' is not a valid workspace attribute\n", params.Attribute)
 	}
 

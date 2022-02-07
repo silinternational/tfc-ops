@@ -18,8 +18,9 @@ import (
 	"fmt"
 	"strings"
 
-	api "github.com/silinternational/tfc-ops/lib"
 	"github.com/spf13/cobra"
+
+	"github.com/silinternational/tfc-ops/lib"
 )
 
 var attributes string
@@ -39,18 +40,29 @@ var listCmd = &cobra.Command{
 func init() {
 	workspaceCmd.AddCommand(listCmd)
 	listCmd.Flags().StringVarP(&attributes, "attributes", "a", "",
-		requiredPrefix+"Workspace attributes to list: id,name,createdat,environment,workingdirectory,terraformversion,vcsrepo")
+		requiredPrefix+"Workspace attributes to list: "+strings.Join(lib.WorkspaceListAttributes, ", ")+
+			" deprecated attributes: "+strings.Join(lib.WorkspaceListAttributesDeprecated, ", "))
 	listCmd.MarkFlagRequired("attributes")
 }
 
 func runList() {
-	allData, err := api.GetV2AllWorkspaceData(organization, atlasToken)
+	allAttrs := strings.Split(attributes, ",")
+	for _, attr := range allAttrs {
+		if !lib.IsStringInSlice(attr, lib.WorkspaceListAttributes) {
+			if lib.IsStringInSlice(attr, lib.WorkspaceListAttributesDeprecated) {
+				fmt.Printf("DEPRECATION: attribute '%s' is deprecated and will be removed in a future version of this program\n",
+					attr)
+			} else {
+				fmt.Printf("'%s' is not a valid workspace attribute\n", attr)
+			}
+		}
+	}
+
+	allData, err := lib.GetV2AllWorkspaceData(organization, atlasToken)
 	if err != nil {
 		fmt.Println(err.Error())
 		return
 	}
-
-	allAttrs := strings.Split(attributes, ",")
 
 	for _, ws := range allData {
 		values := make([]string, len(allAttrs))

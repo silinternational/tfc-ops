@@ -317,7 +317,7 @@ func GetUpdateV2VariablePayload(organization, workspaceName, variableID string, 
       "sensitive":%t
     }
   },
-  "relationships": {
+  "filter": {
     "organization": {
       "name":"%s"
     },

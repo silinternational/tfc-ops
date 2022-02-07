@@ -216,4 +216,4 @@ Global Flags:
 
 ## License
 terraform-enterprise-monitor is released under the Apache 2.0 license. See 
-[LICENSE](https://github.com/silinternational/terraform-enterprise-monitor/blob/master/LICENSE)
+[LICENSE](https://github.com/silinternational/terraform-enterprise-monitor/blob/main/LICENSE)

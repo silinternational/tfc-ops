@@ -13,7 +13,7 @@ https://app.terraform.io/app/settings/tokens and generating a new token.
 ## Installation
 There are three ways to download/install this script:
 
-1. Download a pre-built binary for your operating system by going to [/dist](https://github.com/silinternational/tfc-ops/tree/master/dist)
+1. Download a pre-built binary for your operating system from the [Releases](https://github.com/silinternational/tfc-ops/releases) page.
 2. If you're a Go developer you can install it by running `go get -u https://github.com/silinternational/tfc-ops.git`
 3. If you're a Go developer and want to modify the source before running, clone this repo and run with `go run main.go ...`
 
@@ -127,7 +127,7 @@ Usage:
   tfc-ops workspaces list [flags]
 
 Flags:
-  -a, --attributes string   required - Workspace attributes to list: id,name,createdat,environment,workingdirectory,terraformversion,vcsrepo
+  -a, --attributes string   required - Workspace attributes to list: id, created-at, environment, name, structured-run-output-enabled, terraform-version, vcs-repo.display-identifier, vcs-repo.oauth-token-id, working-directory deprecated attributes: createdat, workingdirectory, terraformversion, vcsrepo
   -h, --help                help for list
 
 Global Flags:
@@ -143,7 +143,7 @@ Usage:
   tfc-ops workspaces update [flags]
 
 Flags:
-  -a, --attribute string   required - Workspace attribute to update. Available options: terraform-version
+  -a, --attribute string   required - Workspace attribute to update. Available options: structured-run-output-enabled, terraform-version, vcs-repo.oauth-token-id
   -d, --dry-run-mode       dry run mode only. (e.g. "-d")
   -h, --help               help for update
   -v, --value string       required - Value
@@ -216,4 +216,4 @@ Global Flags:
 
 ## License
 terraform-enterprise-monitor is released under the Apache 2.0 license. See 
-[LICENSE](https://github.com/silinternational/terraform-enterprise-monitor/blob/master/LICENSE)
+[LICENSE](https://github.com/silinternational/terraform-enterprise-monitor/blob/main/LICENSE)

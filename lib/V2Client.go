@@ -142,6 +142,7 @@ type V2WorkspaceData struct {
 
 const (
 	WsAttrID                   = "id"
+	WsAttrAutoApply            = "auto-apply"
 	WsAttrCreatedAt            = "created-at"
 	WsAttrEnvironment          = "environment"
 	WsAttrName                 = "name"
@@ -159,7 +160,7 @@ var WorkspaceUpdateAttributes = []string{WsAttrStructuredRunOutput, WsAttrTerraf
 // WorkspaceListAttributes is a list of `V2WorkspaceData` attributes supported by the
 // `workspace list` command
 var WorkspaceListAttributes = []string{
-	WsAttrID, WsAttrCreatedAt, WsAttrEnvironment, WsAttrName, WsAttrStructuredRunOutput,
+	WsAttrID, WsAttrAutoApply, WsAttrCreatedAt, WsAttrEnvironment, WsAttrName, WsAttrStructuredRunOutput,
 	WsAttrTerraformVersion, WsAttrVcsDisplayIdentifier, WsAttrVcsTokenID, WsAttrWorkingDirectory,
 }
 
@@ -174,6 +175,8 @@ func (v *V2WorkspaceData) AttributeByLabel(label string) (string, error) {
 	switch strings.ToLower(label) {
 	case WsAttrID:
 		return v.ID, nil
+	case WsAttrAutoApply:
+		return fmt.Sprintf("%v", v.Attributes.AutoApply), nil
 	case WsAttrCreatedAt, "createdat":
 		return v.Attributes.CreatedAt.String(), nil
 	case WsAttrEnvironment:

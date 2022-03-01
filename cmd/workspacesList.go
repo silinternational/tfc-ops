@@ -39,42 +39,22 @@ var listCmd = &cobra.Command{
 
 func init() {
 	workspaceCmd.AddCommand(listCmd)
-	listCmd.Flags().StringVarP(&attributes, "attributes", "a", "",
-		requiredPrefix+"Workspace attributes to list: "+strings.Join(lib.WorkspaceListAttributes, ", ")+
-			" deprecated attributes: "+strings.Join(lib.WorkspaceListAttributesDeprecated, ", "))
-	listCmd.MarkFlagRequired("attributes")
+	const flagAttributes = "attributes"
+	listCmd.Flags().StringVarP(&attributes, flagAttributes, "a", "",
+		requiredPrefix+"Workspace attributes to list, use Terraform Cloud API workspace attribute names")
+	_ = listCmd.MarkFlagRequired(flagAttributes)
 }
 
 func runList() {
 	allAttrs := strings.Split(attributes, ",")
-	for _, attr := range allAttrs {
-		if !lib.IsStringInSlice(attr, lib.WorkspaceListAttributes) {
-			if lib.IsStringInSlice(attr, lib.WorkspaceListAttributesDeprecated) {
-				fmt.Printf("DEPRECATION: attribute '%s' is deprecated and will be removed in a future version of this program\n",
-					attr)
-			} else {
-				fmt.Printf("'%s' is not a valid workspace attribute\n", attr)
-			}
-		}
-	}
-
-	allData, err := lib.GetV2AllWorkspaceData(organization, atlasToken)
+	allData, err := lib.GetWorkspaceAttributes(organization, atlasToken, allAttrs)
 	if err != nil {
 		fmt.Println(err.Error())
 		return
 	}
 
+	fmt.Println(strings.Join(allAttrs, ", "))
 	for _, ws := range allData {
-		values := make([]string, len(allAttrs))
-		for i, a := range allAttrs {
-			value, err := ws.AttributeByLabel(strings.Trim(a, " "))
-			if err != nil {
-				println("\n", err.Error())
-				return
-			}
-			values[i] = value
-		}
-
-		println(strings.Join(values, ", "))
+		fmt.Println(strings.Join(ws, ", "))
 	}
 }

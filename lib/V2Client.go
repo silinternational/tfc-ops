@@ -21,11 +21,14 @@ import (
 	"fmt"
 	"io"
 	"io/ioutil"
+	"net/http"
 	"os"
 	"os/exec"
 	"strings"
 	"text/tabwriter"
 	"time"
+
+	"github.com/Jeffail/gabs/v2"
 )
 
 const baseURLv2 = "https://app.terraform.io/api/v2"
@@ -1036,4 +1039,48 @@ func IsStringInSlice(needle string, haystack []string) bool {
 	}
 
 	return false
+}
+
+func GetWorkspaceAttributes(organization, tfToken string, attributes []string) ([][]string, error) {
+	baseURL := fmt.Sprintf(baseURLv2+"/organizations/%s/workspaces?page%%5Bsize%%5D=1&page%%5Bnumber%%5D=", organization)
+	headers := map[string]string{
+		"Authorization": "Bearer " + tfToken,
+		"Content-Type":  "application/vnd.api+json",
+	}
+
+	var attributeData [][]string
+	for page := 1; ; page++ {
+		url := fmt.Sprintf("%s%d", baseURL, page)
+		resp := CallAPI("GET", url, "", headers)
+		ws := parseWorkspacePage(resp, attributes)
+		attributeData = append(attributeData, ws...)
+		if len(ws) < 20 { // TODO: use a const or var for 20
+			break
+		}
+	}
+	return attributeData, nil
+}
+
+func parseWorkspacePage(resp *http.Response, attributes []string) [][]string {
+	defer func() {
+		if err := resp.Body.Close(); err != nil {
+			panic("failed to close response body: " + err.Error())
+		}
+	}()
+
+	parsed, err := gabs.ParseJSONBuffer(resp.Body)
+	if err != nil {
+		panic(err)
+	}
+
+	wsAttributes := parsed.Search("data", "*", "attributes").Children()
+	attributeData := make([][]string, len(wsAttributes))
+	for i, ws := range wsAttributes {
+		attributeData[i] = make([]string, len(attributes))
+		for j, a := range attributes {
+			v := ws.Path(a).Data()
+			attributeData[i][j] = fmt.Sprintf("%v", v)
+		}
+	}
+	return attributeData
 }

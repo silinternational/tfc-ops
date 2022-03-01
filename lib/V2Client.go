@@ -160,20 +160,6 @@ const (
 // `workspace update` command
 var WorkspaceUpdateAttributes = []string{WsAttrStructuredRunOutput, WsAttrTerraformVersion, WsAttrVcsTokenID}
 
-// WorkspaceListAttributes is a list of `V2WorkspaceData` attributes supported by the
-// `workspace list` command
-var WorkspaceListAttributes = []string{
-	WsAttrID, WsAttrAutoApply, WsAttrCreatedAt, WsAttrEnvironment, WsAttrName, WsAttrStructuredRunOutput,
-	WsAttrTerraformVersion, WsAttrVcsDisplayIdentifier, WsAttrVcsTokenID, WsAttrWorkingDirectory,
-}
-
-// WorkspaceListAttributesDeprecated is a list of `V2WorkspaceData` attributes supported by the
-// `workspace list` command, but will be removed in a later version of this program.
-var WorkspaceListAttributesDeprecated = []string{
-	// deprecated attributes retained for backward compatibility
-	"createdat", "workingdirectory", "terraformversion", "vcsrepo",
-}
-
 func (v *V2WorkspaceData) AttributeByLabel(label string) (string, error) {
 	switch strings.ToLower(label) {
 	case WsAttrID:

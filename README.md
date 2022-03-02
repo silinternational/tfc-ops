@@ -143,7 +143,7 @@ Usage:
   tfc-ops workspaces update [flags]
 
 Flags:
-  -a, --attribute string   required - Workspace attribute to update. Available options: structured-run-output-enabled, terraform-version, vcs-repo.oauth-token-id
+  -a, --attribute string   required - Workspace attribute to update, use Terraform Cloud API workspace attribute names
   -d, --dry-run-mode       dry run mode only. (e.g. "-d")
   -h, --help               help for update
   -v, --value string       required - Value

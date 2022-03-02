@@ -21,14 +21,16 @@ import (
 	"fmt"
 	"io"
 	"io/ioutil"
+	"net/http"
 	"os"
 	"os/exec"
+	"strconv"
 	"strings"
 	"text/tabwriter"
 	"time"
-)
 
-const baseURLv2 = "https://app.terraform.io/api/v2"
+	"github.com/Jeffail/gabs/v2"
+)
 
 type V2UpdateConfig struct {
 	Organization          string
@@ -156,20 +158,6 @@ const (
 // WorkspaceUpdateAttributes is a list of `V2WorkspaceData` attributes supported by the
 // `workspace update` command
 var WorkspaceUpdateAttributes = []string{WsAttrStructuredRunOutput, WsAttrTerraformVersion, WsAttrVcsTokenID}
-
-// WorkspaceListAttributes is a list of `V2WorkspaceData` attributes supported by the
-// `workspace list` command
-var WorkspaceListAttributes = []string{
-	WsAttrID, WsAttrAutoApply, WsAttrCreatedAt, WsAttrEnvironment, WsAttrName, WsAttrStructuredRunOutput,
-	WsAttrTerraformVersion, WsAttrVcsDisplayIdentifier, WsAttrVcsTokenID, WsAttrWorkingDirectory,
-}
-
-// WorkspaceListAttributesDeprecated is a list of `V2WorkspaceData` attributes supported by the
-// `workspace list` command, but will be removed in a later version of this program.
-var WorkspaceListAttributesDeprecated = []string{
-	// deprecated attributes retained for backward compatibility
-	"createdat", "workingdirectory", "terraformversion", "vcsrepo",
-}
 
 func (v *V2WorkspaceData) AttributeByLabel(label string) (string, error) {
 	switch strings.ToLower(label) {
@@ -1036,4 +1024,51 @@ func IsStringInSlice(needle string, haystack []string) bool {
 	}
 
 	return false
+}
+
+// GetWorkspaceAttributes returns a list of all workspaces in `organization` and the values of the attributes requested
+// in the `attributes` list. The value of unrecognized attribute names will be returned as `null`.
+func GetWorkspaceAttributes(organization, tfToken string, attributes []string) ([][]string, error) {
+	u := NewTfcUrl(fmt.Sprintf("/organizations/%s/workspaces", organization))
+	u.SetParam("page[size]", strconv.Itoa(pageSize))
+
+	headers := map[string]string{
+		"Authorization": "Bearer " + tfToken,
+		"Content-Type":  "application/vnd.api+json",
+	}
+	var attributeData [][]string
+	for page := 1; ; page++ {
+		u.SetParam(paramPageNumber, strconv.Itoa(page))
+		resp := CallAPI(http.MethodGet, u.String(), "", headers)
+		ws := parseWorkspacePage(resp, attributes)
+		attributeData = append(attributeData, ws...)
+		if len(ws) < pageSize {
+			break
+		}
+	}
+	return attributeData, nil
+}
+
+func parseWorkspacePage(resp *http.Response, attributes []string) [][]string {
+	defer func() {
+		if err := resp.Body.Close(); err != nil {
+			panic("failed to close response body: " + err.Error())
+		}
+	}()
+
+	parsed, err := gabs.ParseJSONBuffer(resp.Body)
+	if err != nil {
+		panic(err)
+	}
+
+	wsAttributes := parsed.Search("data", "*", "attributes").Children()
+	attributeData := make([][]string, len(wsAttributes))
+	for i, ws := range wsAttributes {
+		attributeData[i] = make([]string, len(attributes))
+		for j, a := range attributes {
+			v := ws.Path(a).Data()
+			attributeData[i][j] = fmt.Sprintf("%v", v)
+		}
+	}
+	return attributeData
 }

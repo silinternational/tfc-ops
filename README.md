@@ -127,7 +127,7 @@ Usage:
   tfc-ops workspaces list [flags]
 
 Flags:
-  -a, --attributes string   required - Workspace attributes to list: id, auto-apply, created-at, environment, name, structured-run-output-enabled, terraform-version, vcs-repo.display-identifier, vcs-repo.oauth-token-id, working-directory deprecated attributes: createdat, workingdirectory, terraformversion, vcsrepo
+  -a, --attributes string   required - Workspace attributes to list, use Terraform Cloud API workspace attribute names
   -h, --help                help for list
 
 Global Flags:

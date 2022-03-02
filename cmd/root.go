@@ -91,9 +91,9 @@ func initConfig() {
 			os.Exit(1)
 		}
 
-		// Search config in home directory with name ".terraform-enterprise-migrator" (without extension).
+		// Search config in home directory with name ".tfc-ops" (without extension).
 		viper.AddConfigPath(home)
-		viper.SetConfigName(".terraform-enterprise-migrator")
+		viper.SetConfigName(".tfc-ops")
 	}
 
 	viper.AutomaticEnv() // read in environment variables that match

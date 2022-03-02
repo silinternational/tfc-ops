@@ -155,10 +155,6 @@ const (
 	WsAttrWorkingDirectory     = "working-directory"
 )
 
-// WorkspaceUpdateAttributes is a list of `V2WorkspaceData` attributes supported by the
-// `workspace update` command
-var WorkspaceUpdateAttributes = []string{WsAttrStructuredRunOutput, WsAttrTerraformVersion, WsAttrVcsTokenID}
-
 func (v *V2WorkspaceData) AttributeByLabel(label string) (string, error) {
 	switch strings.ToLower(label) {
 	case WsAttrID:
@@ -953,13 +949,17 @@ func UpdateWorkspace(params WorkspaceUpdateParams) {
 		"Authorization": "Bearer " + params.Token,
 		"Content-Type":  "application/vnd.api+json",
 	}
-	fmtStrings := map[string]string{
-		WsAttrStructuredRunOutput: `"structured-run-output-enabled":"%s"`,
-		WsAttrTerraformVersion:    `"terraform-version":"%s"`,
-		WsAttrVcsTokenID:          `"vcs-repo":{"oauth-token-id":"%s"}`,
+	jsonObj := gabs.Wrap(map[string]interface{}{
+		"data": map[string]interface{}{
+			"type": "workspace",
+		},
+	})
+	_, err = jsonObj.SetP(parseVal(params.Value), "data.attributes."+params.Attribute)
+	if err != nil {
+		fmt.Println("unable to process attribute for update: ", err.Error())
+		return
 	}
-	postData := fmt.Sprintf(`{"data":{"type":"workspace","attributes":{`+fmtStrings[params.Attribute]+`}}}`,
-		params.Value)
+	postData := jsonObj.String()
 
 	if params.Debug {
 		fmt.Printf("request body:\n    %s\n", postData)
@@ -981,13 +981,22 @@ func UpdateWorkspace(params WorkspaceUpdateParams) {
 	fmt.Printf("Updated %d workspace(s)\n", len(foundWs))
 }
 
+func parseVal(value string) interface{} {
+	if value == "null" {
+		return nil
+	}
+	if i, err := strconv.ParseInt(value, 10, 64); err == nil {
+		return i
+	}
+	if b, err := strconv.ParseBool(value); err == nil {
+		return b
+	}
+	return value
+}
+
 func validateUpdateWorkspaceParams(params WorkspaceUpdateParams) error {
 	if params.Debug {
 		fmt.Printf("params:\n    %#v\n", params)
-	}
-
-	if !IsStringInSlice(params.Attribute, WorkspaceUpdateAttributes) {
-		return fmt.Errorf("'%s' is not a valid workspace attribute\n", params.Attribute)
 	}
 
 	if len(params.WorkspaceFilter) < 3 {

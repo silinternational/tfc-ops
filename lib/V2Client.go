@@ -1075,7 +1075,12 @@ func parseWorkspacePage(resp *http.Response, attributes []string) [][]string {
 	for i, ws := range wsAttributes {
 		attributeData[i] = make([]string, len(attributes))
 		for j, a := range attributes {
-			v := ws.Path(a).Data()
+			var v interface{}
+			if a == "id" {
+				v = parsed.Path(fmt.Sprintf("data.%d.id", i)).Data()
+			} else {
+				v = ws.Path(a).Data()
+			}
 			attributeData[i][j] = fmt.Sprintf("%v", v)
 		}
 	}

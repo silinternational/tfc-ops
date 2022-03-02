@@ -360,7 +360,7 @@ func getWorkspacePage(url string, headers map[string]string) (AllV2WorkspacesJSO
 
 func GetV2WorkspaceData(organization, workspaceName, tfToken string) (V2WorkspaceJSON, error) {
 	u := NewTfcUrl(fmt.Sprintf(
-		baseURLv2+"/organizations/%s/workspaces/%s",
+		"/organizations/%s/workspaces/%s",
 		organization,
 		workspaceName,
 	))
@@ -386,7 +386,7 @@ func GetV2WorkspaceData(organization, workspaceName, tfToken string) (V2Workspac
 
 // GetVarsFromV2 returns a list of Terraform variables for a given workspace
 func GetVarsFromV2(organization, workspaceName, tfToken string) ([]V2Var, error) {
-	u := NewTfcUrl(baseURLv2 + "/vars")
+	u := NewTfcUrl("/vars")
 	u.SetParam(paramFilterOrganizationName, organization)
 	u.SetParam(paramFilterWorkspaceName, workspaceName)
 
@@ -455,7 +455,7 @@ func GetMatchingVarsFromV2(organization string, wsName string, tfToken string, k
 
 // GetTeamAccessFromV2 returns the team access data from an existing workspace
 func GetTeamAccessFromV2(workspaceID, tfToken string) (AllTeamWorkspaceData, error) {
-	u := NewTfcUrl(fmt.Sprintf(baseURLv2 + "/team-workspaces"))
+	u := NewTfcUrl(fmt.Sprintf("/team-workspaces"))
 	u.SetParam(paramFilterWorkspaceID, workspaceID)
 
 	headers := map[string]string{

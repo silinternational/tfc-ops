@@ -24,14 +24,13 @@ import (
 	"net/http"
 	"os"
 	"os/exec"
+	"strconv"
 	"strings"
 	"text/tabwriter"
 	"time"
 
 	"github.com/Jeffail/gabs/v2"
 )
-
-const baseURLv2 = "https://app.terraform.io/api/v2"
 
 type V2UpdateConfig struct {
 	Organization          string
@@ -1027,20 +1026,23 @@ func IsStringInSlice(needle string, haystack []string) bool {
 	return false
 }
 
+// GetWorkspaceAttributes returns a list of all workspaces in `organization` and the values of the attributes requested
+// in the `attributes` list. The value of unrecognized attribute names will be returned as `null`.
 func GetWorkspaceAttributes(organization, tfToken string, attributes []string) ([][]string, error) {
-	baseURL := fmt.Sprintf(baseURLv2+"/organizations/%s/workspaces?page%%5Bsize%%5D=1&page%%5Bnumber%%5D=", organization)
+	u := NewTfcUrl(fmt.Sprintf("/organizations/%s/workspaces", organization))
+	u.SetParam("page[size]", strconv.Itoa(pageSize))
+
 	headers := map[string]string{
 		"Authorization": "Bearer " + tfToken,
 		"Content-Type":  "application/vnd.api+json",
 	}
-
 	var attributeData [][]string
 	for page := 1; ; page++ {
-		url := fmt.Sprintf("%s%d", baseURL, page)
-		resp := CallAPI("GET", url, "", headers)
+		u.SetParam(paramPageNumber, strconv.Itoa(page))
+		resp := CallAPI(http.MethodGet, u.String(), "", headers)
 		ws := parseWorkspacePage(resp, attributes)
 		attributeData = append(attributeData, ws...)
-		if len(ws) < 20 { // TODO: use a const or var for 20
+		if len(ws) < pageSize {
 			break
 		}
 	}

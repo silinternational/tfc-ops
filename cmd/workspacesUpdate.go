@@ -17,7 +17,6 @@ package cmd
 import (
 	"fmt"
 	"os"
-	"strings"
 
 	"github.com/spf13/cobra"
 
@@ -52,8 +51,7 @@ func init() {
 	workspaceCmd.AddCommand(workspaceUpdateCmd)
 
 	workspaceUpdateCmd.Flags().StringVarP(&attribute, flagAttribute, "a", "",
-		requiredPrefix+"Workspace attribute to update. Available options: "+
-			strings.Join(lib.WorkspaceUpdateAttributes, ", "))
+		requiredPrefix+"Workspace attribute to update, use Terraform Cloud API workspace attribute names")
 	workspaceUpdateCmd.Flags().StringVarP(&value, flagValue, "v", "",
 		requiredPrefix+"Value")
 	workspaceUpdateCmd.Flags().StringVarP(&workspaceFilter, flagWorkspaceFilter, "w", "",

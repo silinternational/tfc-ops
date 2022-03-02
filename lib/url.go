@@ -10,6 +10,7 @@ const (
 	pageSize        = 10
 	paramPageSize   = "page[size]"
 	paramPageNumber = "page[number]"
+	paramSearchName             = "search[name]"
 )
 
 type TfcUrl struct {

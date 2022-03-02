@@ -1006,33 +1006,35 @@ func validateUpdateWorkspaceParams(params WorkspaceUpdateParams) error {
 	return nil
 }
 
-// FindWorkspaces retrieves the full list of workspaces from Terraform Cloud and searches for any that
+// FindWorkspaces uses the `search[name]` parameter to retrieve a list of workspaces in Terraform Cloud that
 // match the workspaceFilter by the workspace name. The list is returned as a map with the ID in the key
 // and the name in the value.
 func FindWorkspaces(organization, token, workspaceFilter string) (map[string]string, error) {
-	wsData, err := GetV2AllWorkspaceData(organization, token)
-	if err != nil {
-		return nil, fmt.Errorf("error getting workspace data: %s", err)
+	u := NewTfcUrl(fmt.Sprintf("/organizations/%s/workspaces", organization))
+	u.SetParam(paramPageSize, strconv.Itoa(pageSize))
+	u.SetParam(paramSearchname, workspaceFilter)
+
+	headers := map[string]string{
+		"Authorization": "Bearer " + token,
+		"Content-Type":  "application/vnd.api+json",
 	}
-	foundWs := map[string]string{}
-	for _, ws := range wsData {
-		if strings.Contains(ws.Attributes.Name, workspaceFilter) {
-			foundWs[ws.ID] = ws.Attributes.Name
+
+	var attributeData [][]string
+	for page := 1; ; page++ {
+		u.SetParam(paramPageNumber, strconv.Itoa(page))
+		resp := CallAPI(http.MethodGet, u.String(), "", headers)
+		ws := parseWorkspacePage(resp, []string{"id", "name"})
+		attributeData = append(attributeData, ws...)
+		if len(ws) < pageSize {
+			break
 		}
+	}
+
+	foundWs := map[string]string{}
+	for _, ws := range attributeData {
+		foundWs[ws[0]] = ws[1]
 	}
 	return foundWs, nil
-}
-
-// IsStringInSlice iterates over a slice of strings, looking for the given
-// string. If found, true is returned. Otherwise, false is returned.
-func IsStringInSlice(needle string, haystack []string) bool {
-	for _, hs := range haystack {
-		if needle == hs {
-			return true
-		}
-	}
-
-	return false
 }
 
 // GetWorkspaceAttributes returns a list of all workspaces in `organization` and the values of the attributes requested

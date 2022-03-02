@@ -2,7 +2,6 @@ package lib
 
 import (
 	"net/url"
-	"strconv"
 )
 
 const (
@@ -29,7 +28,6 @@ func NewTfcUrl(path string) TfcUrl {
 	tfcUrl := TfcUrl{
 		URL: *newURL,
 	}
-	tfcUrl.SetParam(paramPageSize, strconv.Itoa(pageSize))
 	return tfcUrl
 }
 

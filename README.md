@@ -119,6 +119,11 @@ Global Flags:
 ```
 
 ### Workspace List Help
+
+Any workspace attribute that can be read by the Terraform API can be retrieved
+by the `workspaces list` command. See the [Terraform API Docs](https://www.terraform.io/cloud-docs/api-docs/workspaces#show-workspace)
+for full details.
+
 ```text
 $ tfc-ops workspaces list -h
 Lists the TF workspaces with (some of) their attributes
@@ -135,6 +140,11 @@ Global Flags:
 ```
 
 ### Workspace Update Help
+
+Any workspace attribute that can be updated by the Terraform API can be updated 
+by the `workspaces update` command. See the [Terraform API Docs](https://www.terraform.io/cloud-docs/api-docs/workspaces#request-body-1)
+for full details.
+
 ```text
 $ tfc-ops workspaces update -h
 Updates an attribute of Terraform workspaces

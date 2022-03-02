@@ -1009,7 +1009,7 @@ func validateUpdateWorkspaceParams(params WorkspaceUpdateParams) error {
 func FindWorkspaces(organization, token, workspaceFilter string) (map[string]string, error) {
 	u := NewTfcUrl(fmt.Sprintf("/organizations/%s/workspaces", organization))
 	u.SetParam(paramPageSize, strconv.Itoa(pageSize))
-	u.SetParam(paramSearchname, workspaceFilter)
+	u.SetParam(paramSearchName, workspaceFilter)
 
 	headers := map[string]string{
 		"Authorization": "Bearer " + token,

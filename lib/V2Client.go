@@ -317,7 +317,8 @@ func GetUpdateV2VariablePayload(organization, workspaceName, variableID string, 
 }
 
 func GetV2AllWorkspaceData(organization, tfToken string) ([]V2WorkspaceData, error) {
-	baseURL := fmt.Sprintf(baseURLv2+"/organizations/%s/workspaces?page%%5Bnumber%%5D=", organization)
+	u := NewTfcUrl(fmt.Sprintf("/organizations/%s/workspaces", organization))
+	u.SetParam(paramPageSize, strconv.Itoa(pageSize))
 
 	headers := map[string]string{
 		"Authorization": "Bearer " + tfToken,
@@ -327,15 +328,15 @@ func GetV2AllWorkspaceData(organization, tfToken string) ([]V2WorkspaceData, err
 	allWsData := []V2WorkspaceData{}
 
 	for page := 1; ; page++ {
-		url := fmt.Sprintf("%s%d", baseURL, page)
-		nextWsData, err := getWorkspacePage(url, headers)
+		u.SetParam(paramPageNumber, strconv.Itoa(page))
+		nextWsData, err := getWorkspacePage(u.String(), headers)
 		if err != nil {
 			return []V2WorkspaceData{}, fmt.Errorf("error getting workspace data for %s: %s", organization, err)
 		}
 		allWsData = append(allWsData, nextWsData.Data...)
 
 		// If there isn't a whole page of contents, then we're on the last one.
-		if len(nextWsData.Data) < 20 {
+		if len(nextWsData.Data) < pageSize {
 			break
 		}
 	}
@@ -343,7 +344,7 @@ func GetV2AllWorkspaceData(organization, tfToken string) ([]V2WorkspaceData, err
 }
 
 func getWorkspacePage(url string, headers map[string]string) (AllV2WorkspacesJSON, error) {
-	resp := CallAPI("GET", url, "", headers)
+	resp := CallAPI(http.MethodGet, url, "", headers)
 
 	defer resp.Body.Close()
 	// bodyBytes, _ := ioutil.ReadAll(resp.Body)
@@ -358,17 +359,17 @@ func getWorkspacePage(url string, headers map[string]string) (AllV2WorkspacesJSO
 }
 
 func GetV2WorkspaceData(organization, workspaceName, tfToken string) (V2WorkspaceJSON, error) {
-	url := fmt.Sprintf(
+	u := NewTfcUrl(fmt.Sprintf(
 		baseURLv2+"/organizations/%s/workspaces/%s",
 		organization,
 		workspaceName,
-	)
+	))
 
 	headers := map[string]string{
 		"Authorization": "Bearer " + tfToken,
 		"Content-Type":  "application/vnd.api+json",
 	}
-	resp := CallAPI("GET", url, "", headers)
+	resp := CallAPI(http.MethodGet, u.String(), "", headers)
 
 	defer resp.Body.Close()
 	// bodyBytes, _ := ioutil.ReadAll(resp.Body)
@@ -383,19 +384,17 @@ func GetV2WorkspaceData(organization, workspaceName, tfToken string) (V2Workspac
 	return v2WsData, nil
 }
 
-//  GetVarsFromV2 returns a list of Terraform variables for a given workspace
+// GetVarsFromV2 returns a list of Terraform variables for a given workspace
 func GetVarsFromV2(organization, workspaceName, tfToken string) ([]V2Var, error) {
-	url := fmt.Sprintf(
-		baseURLv2+"/vars?filter%%5Borganization%%5D%%5Bname%%5D=%s&filter%%5Bworkspace%%5D%%5Bname%%5D=%s",
-		organization,
-		workspaceName,
-	)
+	u := NewTfcUrl(baseURLv2 + "/vars")
+	u.SetParam(paramFilterOrganizationName, organization)
+	u.SetParam(paramFilterWorkspaceName, workspaceName)
 
 	headers := map[string]string{
 		"Authorization": "Bearer " + tfToken,
 		"Content-Type":  "application/vnd.api+json",
 	}
-	resp := CallAPI("GET", url, "", headers)
+	resp := CallAPI(http.MethodGet, u.String(), "", headers)
 
 	defer resp.Body.Close()
 	// bodyBytes, _ := ioutil.ReadAll(resp.Body)
@@ -456,17 +455,15 @@ func GetMatchingVarsFromV2(organization string, wsName string, tfToken string, k
 
 // GetTeamAccessFromV2 returns the team access data from an existing workspace
 func GetTeamAccessFromV2(workspaceID, tfToken string) (AllTeamWorkspaceData, error) {
-	url := fmt.Sprintf(
-		baseURLv2+"/team-workspaces?filter%%5Bworkspace%%5D%%5Bid%%5D=%s",
-		workspaceID,
-	)
+	u := NewTfcUrl(fmt.Sprintf(baseURLv2 + "/team-workspaces"))
+	u.SetParam(paramFilterWorkspaceID, workspaceID)
 
 	headers := map[string]string{
 		"Authorization": "Bearer " + tfToken,
 		"Content-Type":  "application/vnd.api+json",
 	}
 
-	resp := CallAPI("GET", url, "", headers)
+	resp := CallAPI(http.MethodGet, u.String(), "", headers)
 
 	defer resp.Body.Close()
 
@@ -890,7 +887,7 @@ type OAuthTokens struct {
 func getVCSToken(vcsUsername, orgName, tfToken string) (string, error) {
 	url := fmt.Sprintf(baseURLv2+"/organizations/%s/oauth-tokens", orgName)
 	headers := map[string]string{"Authorization": "Bearer " + tfToken}
-	resp := CallAPI("GET", url, "", headers)
+	resp := CallAPI(http.MethodGet, url, "", headers)
 
 	defer resp.Body.Close()
 	// bodyBytes, _ := ioutil.ReadAll(resp.Body)
@@ -1041,7 +1038,7 @@ func FindWorkspaces(organization, token, workspaceFilter string) (map[string]str
 // in the `attributes` list. The value of unrecognized attribute names will be returned as `null`.
 func GetWorkspaceAttributes(organization, tfToken string, attributes []string) ([][]string, error) {
 	u := NewTfcUrl(fmt.Sprintf("/organizations/%s/workspaces", organization))
-	u.SetParam("page[size]", strconv.Itoa(pageSize))
+	u.SetParam(paramPageSize, strconv.Itoa(pageSize))
 
 	headers := map[string]string{
 		"Authorization": "Bearer " + tfToken,

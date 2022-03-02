@@ -6,10 +6,15 @@ import (
 )
 
 const (
-	baseURLv2       = "https://app.terraform.io/api/v2"
-	pageSize        = 10
-	paramPageSize   = "page[size]"
-	paramPageNumber = "page[number]"
+	baseURLv2 = "https://app.terraform.io/api/v2"
+
+	pageSize = 20
+
+	paramFilterOrganizationName = "filter[organization][name]"
+	paramFilterWorkspaceID      = "filter[workspace][id]"
+	paramFilterWorkspaceName    = "filter[workspace][name]"
+	paramPageSize               = "page[size]"
+	paramPageNumber             = "page[number]"
 	paramSearchName             = "search[name]"
 )
 

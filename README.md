@@ -1,6 +1,7 @@
 # Terraform Cloud Ops Tool
 This application can be helpful in making copies/clones of a workspace and bringing its variables over
-to the new one. It can also be used for listing workspaces and listing or modifying variables in workspaces.
+to the new one. It can also be used for listing or updating workspace attributes and listing or
+modifying variables in workspaces.
 
 ## Required ENV vars
 - `ATLAS_TOKEN` - Must be set as an environment variable. Get this by going to 
@@ -50,7 +51,7 @@ Get help about the command.
 
 List the workspaces with at least one of their attributes/pieces of data.
 
-```$ go run main.go workspaces list -o=gtis -a=id,name,createdat,environment,workingdirectory,terraformversion,vcsrepo```
+```$ go run main.go workspaces list -o=gtis -a=id,name,created-at,environment,working-directory,terraform-version,vcsrepo```
 
 ## Usage
 
@@ -65,6 +66,7 @@ Usage:
 Available Commands:
   help        Help about any command
   variables   Update or List variables
+  version     Show version
   workspaces  Clone, List, or Update workspaces
 
 Flags:
@@ -119,6 +121,11 @@ Global Flags:
 ```
 
 ### Workspace List Help
+
+Any workspace attribute that can be read by the Terraform API can be retrieved
+by the `workspaces list` command. See the [Terraform API Docs](https://www.terraform.io/cloud-docs/api-docs/workspaces#show-workspace)
+for full details.
+
 ```text
 $ tfc-ops workspaces list -h
 Lists the TF workspaces with (some of) their attributes
@@ -127,7 +134,7 @@ Usage:
   tfc-ops workspaces list [flags]
 
 Flags:
-  -a, --attributes string   required - Workspace attributes to list: id, created-at, environment, name, structured-run-output-enabled, terraform-version, vcs-repo.display-identifier, vcs-repo.oauth-token-id, working-directory deprecated attributes: createdat, workingdirectory, terraformversion, vcsrepo
+  -a, --attributes string   required - Workspace attributes to list, use Terraform Cloud API workspace attribute names
   -h, --help                help for list
 
 Global Flags:
@@ -135,6 +142,11 @@ Global Flags:
 ```
 
 ### Workspace Update Help
+
+Any workspace attribute that can be updated by the Terraform API can be updated 
+by the `workspaces update` command. See the [Terraform API Docs](https://www.terraform.io/cloud-docs/api-docs/workspaces#request-body-1)
+for full details.
+
 ```text
 $ tfc-ops workspaces update -h
 Updates an attribute of Terraform workspaces
@@ -143,7 +155,7 @@ Usage:
   tfc-ops workspaces update [flags]
 
 Flags:
-  -a, --attribute string   required - Workspace attribute to update. Available options: structured-run-output-enabled, terraform-version, vcs-repo.oauth-token-id
+  -a, --attribute string   required - Workspace attribute to update, use Terraform Cloud API workspace attribute names
   -d, --dry-run-mode       dry run mode only. (e.g. "-d")
   -h, --help               help for update
   -v, --value string       required - Value
@@ -215,5 +227,5 @@ Global Flags:
 ```
 
 ## License
-terraform-enterprise-monitor is released under the Apache 2.0 license. See 
-[LICENSE](https://github.com/silinternational/terraform-enterprise-monitor/blob/main/LICENSE)
+tfc-ops is released under the Apache 2.0 license. See 
+[LICENSE](https://github.com/silinternational/tfc-ops/blob/main/LICENSE)

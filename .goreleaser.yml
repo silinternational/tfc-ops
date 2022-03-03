@@ -16,6 +16,9 @@ builds:
     ignore:
       - goos: windows
         goarch: arm
+    ldflags:
+    - -s -w
+    - -X '{{.ModulePath}}/cmd.version={{.Version}}'
 gomod:
   proxy: true
 archives:

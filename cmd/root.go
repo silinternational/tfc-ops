@@ -18,7 +18,7 @@ import (
 	"fmt"
 	"os"
 
-	homedir "github.com/mitchellh/go-homedir"
+	"github.com/mitchellh/go-homedir"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 )
@@ -53,12 +53,6 @@ func Execute() {
 
 func init() {
 	cobra.OnInitialize(initConfig)
-
-	rootCmd.PersistentFlags().StringVarP(&organization, "organization",
-		"o", "", requiredPrefix+"Name of Terraform Enterprise Organization")
-	if err := rootCmd.MarkPersistentFlagRequired("organization"); err != nil {
-		panic("MarkPersistentFlagRequired failed with error " + err.Error())
-	}
 
 	// Cobra also supports local flags, which will only run
 	// when this action is called directly.
@@ -97,9 +91,9 @@ func initConfig() {
 			os.Exit(1)
 		}
 
-		// Search config in home directory with name ".terraform-enterprise-migrator" (without extension).
+		// Search config in home directory with name ".tfc-ops" (without extension).
 		viper.AddConfigPath(home)
-		viper.SetConfigName(".terraform-enterprise-migrator")
+		viper.SetConfigName(".tfc-ops")
 	}
 
 	viper.AutomaticEnv() // read in environment variables that match
@@ -107,5 +101,13 @@ func initConfig() {
 	// If a config file is found, read it in.
 	if err := viper.ReadInConfig(); err == nil {
 		fmt.Println("Using config file:", viper.ConfigFileUsed())
+	}
+}
+
+func makeOrgFlagRequired(command *cobra.Command) {
+	command.PersistentFlags().StringVarP(&organization, "organization",
+		"o", "", requiredPrefix+"Name of Terraform Enterprise Organization")
+	if err := command.MarkPersistentFlagRequired("organization"); err != nil {
+		panic("MarkPersistentFlagRequired failed with error " + err.Error())
 	}
 }

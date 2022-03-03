@@ -28,4 +28,5 @@ var variablesCmd = &cobra.Command{
 
 func init() {
 	rootCmd.AddCommand(variablesCmd)
+	makeOrgFlagRequired(variablesCmd)
 }

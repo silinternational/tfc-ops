@@ -28,4 +28,5 @@ var workspaceCmd = &cobra.Command{
 
 func init() {
 	rootCmd.AddCommand(workspaceCmd)
+	makeOrgFlagRequired(workspaceCmd)
 }

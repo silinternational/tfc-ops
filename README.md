@@ -65,6 +65,7 @@ Usage:
 Available Commands:
   help        Help about any command
   variables   Update or List variables
+  version     Show version
   workspaces  Clone, List, or Update workspaces
 
 Flags:
@@ -225,5 +226,5 @@ Global Flags:
 ```
 
 ## License
-terraform-enterprise-monitor is released under the Apache 2.0 license. See 
-[LICENSE](https://github.com/silinternational/terraform-enterprise-monitor/blob/main/LICENSE)
+tfc-ops is released under the Apache 2.0 license. See 
+[LICENSE](https://github.com/silinternational/tfc-ops/blob/main/LICENSE)

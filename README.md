@@ -1,6 +1,7 @@
 # Terraform Cloud Ops Tool
 This application can be helpful in making copies/clones of a workspace and bringing its variables over
-to the new one. It can also be used for listing workspaces and listing or modifying variables in workspaces.
+to the new one. It can also be used for listing or updating workspace attributes and listing or
+modifying variables in workspaces.
 
 ## Required ENV vars
 - `ATLAS_TOKEN` - Must be set as an environment variable. Get this by going to 
@@ -50,7 +51,7 @@ Get help about the command.
 
 List the workspaces with at least one of their attributes/pieces of data.
 
-```$ go run main.go workspaces list -o=gtis -a=id,name,createdat,environment,workingdirectory,terraformversion,vcsrepo```
+```$ go run main.go workspaces list -o=gtis -a=id,name,created-at,environment,working-directory,terraform-version,vcsrepo```
 
 ## Usage
 

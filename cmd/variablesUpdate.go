@@ -56,13 +56,6 @@ var updateCmd = &cobra.Command{
 func init() {
 	variablesCmd.AddCommand(updateCmd)
 	updateCmd.Flags().StringVarP(
-		&workspace,
-		"workspace",
-		"w",
-		"",
-		`Name of the Workspace in Terraform Cloud`,
-	)
-	updateCmd.Flags().StringVarP(
 		&variableSearchString,
 		"variable-search-string",
 		"s",
@@ -135,7 +128,7 @@ func runVariablesUpdate(cfg updater.UpdateConfig) {
 }
 
 func runVariablesUpdateAll(cfg updater.UpdateConfig) {
-	allData, err := api.GetAllWorkspaceData(organization, atlasToken)
+	allData, err := api.GetAllWorkspaces(organization, atlasToken)
 	for _, ws := range allData {
 		value, err := ws.AttributeByLabel(strings.Trim("name", " "))
 		fmt.Printf("Do you want to update the variable %s across the workspace: %s\n\n", variableSearchString, value)

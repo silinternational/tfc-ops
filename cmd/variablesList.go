@@ -1,4 +1,4 @@
-// Copyright © 2018-2021 SIL International
+// Copyright © 2018-2022 SIL International
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -71,13 +71,13 @@ func init() {
 	variablesListCmd.Flags().StringVarP(&valueContains, "value_contains", "v", "",
 		"required if key_contains is blank - string contained in the Terraform variable values to report on")
 	variablesListCmd.Flags().StringVarP(&workspace, "workspace", "w", "",
-		`Name of the Workspace in TF Enterprise`,
+		`Name of the Workspace in Terraform Cloud`,
 	)
 }
 
 func runVariablesList() {
 	if workspace != "" {
-		vars, err := api.GetMatchingVarsFromV2(organization, workspace, atlasToken, keyContains, valueContains)
+		vars, err := api.GetMatchingVars(organization, workspace, atlasToken, keyContains, valueContains)
 		if err != nil {
 			println(err.Error())
 			return
@@ -85,13 +85,13 @@ func runVariablesList() {
 		printWorkspaceVars(workspace, vars)
 		return
 	}
-	allData, err := api.GetV2AllWorkspaceData(organization, atlasToken)
+	allData, err := api.GetAllWorkspaceData(organization, atlasToken)
 	if err != nil {
 		println(err.Error())
 		return
 	}
 
-	wsVars, err := api.GetAllWorkSpacesVarsFromV2(allData, organization, keyContains, valueContains, atlasToken)
+	wsVars, err := api.GetAllWorkSpacesVars(allData, organization, keyContains, valueContains, atlasToken)
 	if err != nil {
 		println(err.Error())
 		return
@@ -104,7 +104,7 @@ func runVariablesList() {
 	return
 }
 
-func printWorkspaceVars(ws string, vs []api.V2Var) {
+func printWorkspaceVars(ws string, vs []api.Var) {
 	if len(vs) == 0 {
 		return
 	}

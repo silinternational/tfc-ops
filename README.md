@@ -71,7 +71,7 @@ Available Commands:
 
 Flags:
   -h, --help                  help for tfc-ops
-  -o, --organization string   required - Name of Terraform Enterprise Organization
+  -o, --organization string   required - Name of Terraform Cloud Organization
 
 Use "tfc-ops [command] --help" for more information about a command.
 ```
@@ -84,7 +84,7 @@ Usage:
   tfc-ops workspaces [command]
 
 Available Commands:
-  clone       Clone a V2 Workspace
+  clone       Clone a Workspace
   list        List Workspaces
   update      Update Workspaces
 
@@ -92,7 +92,7 @@ Flags:
   -h, --help   help for workspaces
 
 Global Flags:
-  -o, --organization string   required - Name of Terraform Enterprise Organization
+  -o, --organization string   required - Name of Terraform Cloud Organization
 
 Use "tfc-ops [command] --help" for more information about a command.
 ```
@@ -101,7 +101,7 @@ Use "tfc-ops [command] --help" for more information about a command.
 ### Workspace Clone Help
 ```text
 $ tfc-ops workspaces clone -h
-Clone a TF Enterprise Version 2 Workspace
+Clone a Terraform Cloud Workspace
 
 Usage:
   tfc-ops workspaces clone [flags]
@@ -111,13 +111,13 @@ Flags:
   -c, --copyVariables                 optional (e.g. "-c=true") whether to copy the values of the Source Workspace variables.
   -d, --differentDestinationAccount   optional (e.g. "-d=true") whether to clone to a different TF account.
   -h, --help                          help for clone
-  -p, --new-organization string       Name of the Destination Organization in TF Enterprise (version 2)
+  -p, --new-organization string       Name of the Destination Organization in Terraform Cloud
   -v, --new-vcs-token-id string       The new organization's VCS repo's oauth-token-id
-  -n, --new-workspace string          required - Name of the new Workspace in TF Enterprise (version 2)
-  -s, --source-workspace string       required - Name of the Source Workspace in TF Enterprise (version 2)
+  -n, --new-workspace string          required - Name of the new Workspace in Terraform Cloud
+  -s, --source-workspace string       required - Name of the Source Workspace in Terraform Cloud
 
 Global Flags:
-  -o, --organization string   required - Name of Terraform Enterprise Organization
+  -o, --organization string   required - Name of Terraform Cloud Organization
 ```
 
 ### Workspace List Help
@@ -138,7 +138,7 @@ Flags:
   -h, --help                help for list
 
 Global Flags:
-  -o, --organization string   required - Name of Terraform Enterprise Organization
+  -o, --organization string   required - Name of Terraform Cloud Organization
 ```
 
 ### Workspace Update Help
@@ -162,7 +162,7 @@ Flags:
   -w, --workspace string   required - Workspace filter
 
 Global Flags:
-  -o, --organization string   required - Name of Terraform Enterprise Organization
+  -o, --organization string   required - Name of Terraform Cloud Organization
 ```
 
 ### Variables Help
@@ -174,13 +174,13 @@ Usage:
 
 Available Commands:
   list        Report on variables
-  update      Update/add a variable in a V2 Workspace
+  update      Update/add a variable in a Workspace
 
 Flags:
   -h, --help   help for variables
 
 Global Flags:
-  -o, --organization string   required - Name of Terraform Enterprise Organization
+  -o, --organization string   required - Name of Terraform Cloud Organization
 
 Use "tfc-ops variables [command] --help" for more information about a command.
 ```
@@ -197,16 +197,16 @@ Flags:
   -h, --help                    help for list
   -k, --key_contains string     required if value_contains is blank - string contained in the Terraform variable keys to report on
   -v, --value_contains string   required if key_contains is blank - string contained in the Terraform variable values to report on
-  -w, --workspace string        Name of the Workspace in TF Enterprise
+  -w, --workspace string        Name of the Workspace in Terraform Cloud
 
 Global Flags:
-  -o, --organization string   required - Name of Terraform Enterprise Organization
+  -o, --organization string   required - Name of Terraform Cloud Organization
 ```
 
 ### Variables Update Help
 ```text
 $ tfc-ops variables update -h
-Update or add a variable in a TF Enterprise Version 2 Workspace based on a complete case-insensitive match
+Update or add a variable in a Terraform Cloud Workspace based on a complete case-insensitive match
 
 Usage:
   tfc-ops variables update [flags]
@@ -219,10 +219,10 @@ Flags:
   -v, --search-on-variable-value        optional (e.g. "-v=true") whether to do the search based on the value of the variables. (Must be false if add-key-if-not-found is true
   -x, --sensitive-variable              optional (e.g. "-x=true") make the variable sensitive.
   -s, --variable-search-string string   required - The string to match in the current variables (either in the Key or Value - see other flags)
-  -w, --workspace string                Name of the Workspace in TF Enterprise (version 2)
+  -w, --workspace string                Name of the Workspace in Terraform Cloud
 
 Global Flags:
-  -o, --organization string   required - Name of Terraform Enterprise Organization
+  -o, --organization string   required - Name of Terraform Cloud Organization
 
 ```
 

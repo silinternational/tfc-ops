@@ -1,4 +1,4 @@
-// Copyright © 2018-2021 SIL International
+// Copyright © 2018-2022 SIL International
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -106,7 +106,7 @@ func initConfig() {
 
 func makeOrgFlagRequired(command *cobra.Command) {
 	command.PersistentFlags().StringVarP(&organization, "organization",
-		"o", "", requiredPrefix+"Name of Terraform Enterprise Organization")
+		"o", "", requiredPrefix+"Name of Terraform Cloud Organization")
 	if err := command.MarkPersistentFlagRequired("organization"); err != nil {
 		panic("MarkPersistentFlagRequired failed with error " + err.Error())
 	}

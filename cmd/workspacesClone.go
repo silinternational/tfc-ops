@@ -1,4 +1,4 @@
-// Copyright © 2018-2021 SIL International
+// Copyright © 2018-2022 SIL International
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -18,8 +18,9 @@ import (
 	"fmt"
 	"os"
 
-	cloner "github.com/silinternational/tfc-ops/lib"
 	"github.com/spf13/cobra"
+
+	cloner "github.com/silinternational/tfc-ops/lib"
 )
 
 var (
@@ -35,8 +36,8 @@ var (
 // cloneCmd represents the clone command
 var cloneCmd = &cobra.Command{
 	Use:   "clone",
-	Short: "Clone a V2 Workspace",
-	Long:  `Clone a TF Enterprise Version 2 Workspace`,
+	Short: "Clone a Workspace",
+	Long:  `Clone a Terraform Cloud Workspace`,
 	Args:  cobra.ExactArgs(0),
 	Run: func(cmd *cobra.Command, args []string) {
 		if differentDestinationAccount {
@@ -51,7 +52,7 @@ var cloneCmd = &cobra.Command{
 			}
 		}
 
-		config := cloner.V2CloneConfig{
+		config := cloner.CloneConfig{
 			Organization:                organization,
 			NewOrganization:             newOrganization,
 			SourceWorkspace:             sourceWorkspace,
@@ -73,21 +74,21 @@ func init() {
 		"new-organization",
 		"p",
 		"",
-		`Name of the Destination Organization in TF Enterprise (version 2)`,
+		`Name of the Destination Organization in Terraform Cloud`,
 	)
 	cloneCmd.Flags().StringVarP(
 		&sourceWorkspace,
 		"source-workspace",
 		"s",
 		"",
-		requiredPrefix+`Name of the Source Workspace in TF Enterprise (version 2)`,
+		requiredPrefix+`Name of the Source Workspace in Terraform Cloud`,
 	)
 	cloneCmd.Flags().StringVarP(
 		&newWorkspace,
 		"new-workspace",
 		"n",
 		"",
-		requiredPrefix+`Name of the new Workspace in TF Enterprise (version 2)`,
+		requiredPrefix+`Name of the new Workspace in Terraform Cloud`,
 	)
 	cloneCmd.Flags().StringVarP(
 		&newVCSTokenID,
@@ -121,7 +122,7 @@ func init() {
 	cloneCmd.MarkFlagRequired("new-workspace")
 }
 
-func runClone(cfg cloner.V2CloneConfig) {
+func runClone(cfg cloner.CloneConfig) {
 	cfg.AtlasTokenDestination = os.Getenv("ATLAS_TOKEN_DESTINATION")
 	if cfg.AtlasTokenDestination == "" {
 		cfg.AtlasTokenDestination = atlasToken
@@ -132,7 +133,7 @@ func runClone(cfg cloner.V2CloneConfig) {
 		cfg.Organization, cfg.SourceWorkspace, cfg.NewWorkspace, cfg.CopyState, cfg.CopyVariables, cfg.DifferentDestinationAccount)
 	cfg.AtlasToken = atlasToken
 
-	sensitiveVars, err := cloner.CloneV2Workspace(cfg)
+	sensitiveVars, err := cloner.CloneWorkspace(cfg)
 	if err != nil {
 		fmt.Println(err.Error())
 		return

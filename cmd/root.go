@@ -105,7 +105,7 @@ func initConfig() {
 
 func makeOrgFlagRequired(command *cobra.Command) {
 	command.PersistentFlags().StringVarP(&organization, "organization",
-		"o", "", requiredPrefix+"Name of Terraform Enterprise Organization")
+		"o", "", requiredPrefix+"Name of Terraform Cloud Organization")
 	if err := command.MarkPersistentFlagRequired("organization"); err != nil {
 		panic("MarkPersistentFlagRequired failed with error " + err.Error())
 	}

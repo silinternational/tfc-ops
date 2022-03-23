@@ -8,9 +8,9 @@ import (
 	"strings"
 )
 
-// CallAPI creates a http.Request object, attaches headers to it and makes the
+// callAPI creates a http.Request object, attaches headers to it and makes the
 // requested api call.
-func CallAPI(method, url, postData string, headers map[string]string) *http.Response {
+func callAPI(method, url, postData string, headers map[string]string) *http.Response {
 	var err error
 	var req *http.Request
 

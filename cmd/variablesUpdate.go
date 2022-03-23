@@ -26,15 +26,15 @@ var (
 // cloneCmd represents the clone command
 var updateCmd = &cobra.Command{
 	Use:   "update",
-	Short: "Update/add a variable in a V2 Workspace",
-	Long:  `Update or add a variable in a TF Enterprise Version 2 Workspace based on a complete case-insensitive match`,
+	Short: "Update/add a variable in a Workspace",
+	Long:  `Update or add a variable in a Terraform Cloud Workspace based on a complete case-insensitive match`,
 	Args:  cobra.ExactArgs(0),
 	Run: func(cmd *cobra.Command, args []string) {
 		if addKeyIfNotFound && searchOnVariableValue {
 			fmt.Println("Error: The 'add-key-if-not-found' flag may not be used with the 'search-on-variable-value' flag")
 			os.Exit(1)
 		}
-		config := updater.V2UpdateConfig{
+		config := updater.UpdateConfig{
 			Organization:          organization,
 			NewOrganization:       newOrganization,
 			Workspace:             workspace,
@@ -60,7 +60,7 @@ func init() {
 		"workspace",
 		"w",
 		"",
-		`Name of the Workspace in TF Enterprise (version 2)`,
+		`Name of the Workspace in Terraform Cloud`,
 	)
 	updateCmd.Flags().StringVarP(
 		&variableSearchString,
@@ -108,7 +108,7 @@ func init() {
 	updateCmd.MarkFlagRequired("new-variable-value")
 }
 
-func runVariablesUpdate(cfg updater.V2UpdateConfig) {
+func runVariablesUpdate(cfg updater.UpdateConfig) {
 	if cfg.AddKeyIfNotFound {
 		if cfg.SearchOnVariableValue {
 			println("update variable aborted. Because addKeyIfNotFound was true, searchOnVariableValue must be set to false")
@@ -124,7 +124,7 @@ func runVariablesUpdate(cfg updater.V2UpdateConfig) {
 		cfg.Organization, cfg.Workspace, cfg.SearchString, cfg.NewValue, cfg.AddKeyIfNotFound, cfg.SearchOnVariableValue)
 	cfg.AtlasToken = atlasToken
 
-	message, err := updater.AddOrUpdateV2Variable(cfg)
+	message, err := updater.AddOrUpdateVariable(cfg)
 	if err != nil {
 		fmt.Println(err.Error())
 		return
@@ -134,8 +134,8 @@ func runVariablesUpdate(cfg updater.V2UpdateConfig) {
 	println(message)
 }
 
-func runVariablesUpdateAll(cfg updater.V2UpdateConfig) {
-	allData, err := api.GetV2AllWorkspaceData(organization, atlasToken)
+func runVariablesUpdateAll(cfg updater.UpdateConfig) {
+	allData, err := api.GetAllWorkspaceData(organization, atlasToken)
 	for _, ws := range allData {
 		value, err := ws.AttributeByLabel(strings.Trim("name", " "))
 		fmt.Printf("Do you want to update the variable %s across the workspace: %s\n\n", variableSearchString, value)

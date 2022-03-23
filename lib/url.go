@@ -5,7 +5,7 @@ import (
 )
 
 const (
-	baseURLv2 = "https://app.terraform.io/api/v2"
+	baseURL = "https://app.terraform.io/api/v2"
 
 	pageSize = 20
 
@@ -22,7 +22,7 @@ type TfcUrl struct {
 }
 
 func NewTfcUrl(path string) TfcUrl {
-	newURL, _ := url.Parse(baseURLv2 + path)
+	newURL, _ := url.Parse(baseURL + path)
 	v := url.Values{}
 	newURL.RawQuery = v.Encode()
 	tfcUrl := TfcUrl{

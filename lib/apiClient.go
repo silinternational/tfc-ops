@@ -25,6 +25,9 @@ func callAPI(method, url, postData string, headers map[string]string) *http.Resp
 		os.Exit(1)
 	}
 
+	req.Header.Set("Authorization", "Bearer "+config.token)
+	req.Header.Set("Content-Type", "application/vnd.api+json")
+
 	for key, val := range headers {
 		req.Header.Set(key, val)
 	}

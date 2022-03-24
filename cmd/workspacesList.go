@@ -47,7 +47,7 @@ func init() {
 
 func runList() {
 	allAttrs := strings.Split(attributes, ",")
-	allData, err := lib.GetWorkspaceAttributes(organization, atlasToken, allAttrs)
+	allData, err := lib.GetWorkspaceAttributes(organization, allAttrs)
 	if err != nil {
 		fmt.Println(err.Error())
 		return

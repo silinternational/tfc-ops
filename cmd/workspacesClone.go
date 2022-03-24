@@ -125,13 +125,12 @@ func init() {
 func runClone(cfg cloner.CloneConfig) {
 	cfg.AtlasTokenDestination = os.Getenv("ATLAS_TOKEN_DESTINATION")
 	if cfg.AtlasTokenDestination == "" {
-		cfg.AtlasTokenDestination = atlasToken
+		cfg.AtlasTokenDestination = os.Getenv("ATLAS_TOKEN")
 		fmt.Print("Info: ATLAS_TOKEN_DESTINATION is not set, using ATLAS_TOKEN for destination account.\n\n")
 	}
 
 	fmt.Printf("clone called using %s, %s, %s, copyState: %t, copyVariables: %t, differentDestinationAccount: %t\n",
 		cfg.Organization, cfg.SourceWorkspace, cfg.NewWorkspace, cfg.CopyState, cfg.CopyVariables, cfg.DifferentDestinationAccount)
-	cfg.AtlasToken = atlasToken
 
 	sensitiveVars, err := cloner.CloneWorkspace(cfg)
 	if err != nil {

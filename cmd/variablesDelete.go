@@ -16,7 +16,6 @@ package cmd
 
 import (
 	"fmt"
-	"log"
 
 	"github.com/spf13/cobra"
 
@@ -40,7 +39,7 @@ func init() {
 	variablesDeleteCmd.Flags().StringVarP(&key, "key", "k", "",
 		requiredPrefix+"Terraform variable key to delete, must match exactly")
 	if err := variablesDeleteCmd.MarkFlagRequired("key"); err != nil {
-		log.Fatalln("failed to mark 'key' as a required flag on variablesDeleteCmd: " + err.Error())
+		errLog.Fatalln("failed to mark 'key' as a required flag on variablesDeleteCmd: " + err.Error())
 	}
 }
 
@@ -58,7 +57,7 @@ func runVariablesDelete() {
 	}
 
 	fmt.Printf("Deleting variables with key '%s' from all workspaces...\n", key)
-	allWorkspaces, err := lib.GetAllWorkspaces(organization, atlasToken)
+	allWorkspaces, err := lib.GetAllWorkspaces(organization)
 	if err != nil {
 		println(err.Error())
 		return
@@ -71,7 +70,7 @@ func runVariablesDelete() {
 }
 
 func deleteWorkspaceVar(org, ws, key string) bool {
-	v, err := lib.GetWorkspaceVar(org, ws, atlasToken, key)
+	v, err := lib.GetWorkspaceVar(org, ws, key)
 	if err != nil {
 		println(err.Error())
 		return false
@@ -82,7 +81,7 @@ func deleteWorkspaceVar(org, ws, key string) bool {
 
 	fmt.Printf("Deleting variable %s from workspace %s\n", v.Key, ws)
 	if !dryRunMode {
-		lib.DeleteVariable(v.ID, atlasToken)
+		lib.DeleteVariable(v.ID)
 	}
 	return true
 }

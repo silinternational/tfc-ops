@@ -57,7 +57,7 @@ func runVariablesDelete() {
 		return
 	}
 
-	fmt.Printf("Removing variables with key '%s' from all workspaces...\n", key)
+	fmt.Printf("Deleting variables with key '%s' from all workspaces...\n", key)
 	allWorkspaces, err := lib.GetAllWorkspaces(organization, atlasToken)
 	if err != nil {
 		println(err.Error())
@@ -80,7 +80,7 @@ func deleteWorkspaceVar(org, ws, key string) bool {
 		return false
 	}
 
-	fmt.Printf("Removing variable %s from workspace %s\n", v.Key, ws)
+	fmt.Printf("Deleting variable %s from workspace %s\n", v.Key, ws)
 	if !dryRunMode {
 		lib.DeleteVariable(v.ID, atlasToken)
 	}

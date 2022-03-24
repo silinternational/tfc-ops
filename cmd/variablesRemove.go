@@ -16,7 +16,7 @@ package cmd
 
 import (
 	"fmt"
-	"os"
+	"log"
 
 	"github.com/spf13/cobra"
 
@@ -25,35 +25,32 @@ import (
 
 var key string
 
-var variablesRemoveCmd = &cobra.Command{
-	Use:   "remove",
-	Short: "Remove variables",
-	Long:  `Remove variables in matching workspaces having the specified key`,
+var variablesDeleteCmd = &cobra.Command{
+	Use:   "delete",
+	Short: "Delete variables",
+	Long:  `Delete variables in matching workspaces having the specified key`,
 	Args:  cobra.ExactArgs(0),
 	Run: func(cmd *cobra.Command, args []string) {
-		if len(key) == 0 {
-			fmt.Println("Error: The 'key' flag must be set")
-			fmt.Println("")
-			os.Exit(1)
-		}
-
-		runVariablesRemove()
+		runVariablesDelete()
 	},
 }
 
 func init() {
-	variablesCmd.AddCommand(variablesRemoveCmd)
-	variablesRemoveCmd.Flags().StringVarP(&key, "key", "k", "",
-		requiredPrefix+"Terraform variable key to remove, must match exactly")
+	variablesCmd.AddCommand(variablesDeleteCmd)
+	variablesDeleteCmd.Flags().StringVarP(&key, "key", "k", "",
+		requiredPrefix+"Terraform variable key to delete, must match exactly")
+	if err := variablesDeleteCmd.MarkFlagRequired("key"); err != nil {
+		log.Fatalln("failed to mark 'key' as a required flag on variablesDeleteCmd: " + err.Error())
+	}
 }
 
-func runVariablesRemove() {
+func runVariablesDelete() {
 	if dryRunMode {
-		fmt.Println("Dry run mode enabled. No variables will be removed.")
+		fmt.Println("Dry run mode enabled. No variables will be deleted.")
 	}
 
 	if workspace != "" {
-		found := removeWorkspaceVar(organization, workspace, key)
+		found := deleteWorkspaceVar(organization, workspace, key)
 		if !found {
 			fmt.Printf("Variable %s not found in workspace %s\n", key, workspace)
 		}
@@ -68,12 +65,12 @@ func runVariablesRemove() {
 	}
 
 	for _, w := range allWorkspaces {
-		removeWorkspaceVar(organization, w.Attributes.Name, key)
+		deleteWorkspaceVar(organization, w.Attributes.Name, key)
 	}
 	return
 }
 
-func removeWorkspaceVar(org, ws, key string) bool {
+func deleteWorkspaceVar(org, ws, key string) bool {
 	v, err := lib.GetWorkspaceVar(org, ws, atlasToken, key)
 	if err != nil {
 		println(err.Error())

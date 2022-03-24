@@ -431,7 +431,7 @@ func GetVarsFromWorkspace(organization, workspaceName, tfToken string) ([]Var, e
 	return variables, nil
 }
 
-// DeleteVariable removes a variable from a workspace
+// DeleteVariable deletes a variable from a workspace
 func DeleteVariable(variableID, tfToken string) {
 	u := NewTfcUrl("/vars/" + variableID)
 

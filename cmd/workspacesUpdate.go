@@ -56,9 +56,6 @@ func init() {
 		requiredPrefix+"Value")
 	workspaceUpdateCmd.Flags().StringVarP(&workspaceFilter, flagWorkspaceFilter, "w", "",
 		requiredPrefix+"Workspace filter")
-	workspaceUpdateCmd.Flags().BoolVarP(&dryRunMode, "dry-run-mode", "d", false,
-		`dry run mode only. (e.g. "-d")`,
-	)
 	requiredFlags := []string{flagAttribute, flagValue, flagWorkspaceFilter}
 	for _, flag := range requiredFlags {
 		if err := workspaceUpdateCmd.MarkFlagRequired(flag); err != nil {

@@ -104,7 +104,11 @@ func initConfig() {
 	}
 }
 
-func makeOrgFlagRequired(command *cobra.Command) {
+func addGlobalFlags(command *cobra.Command) {
+	command.PersistentFlags().BoolVarP(&dryRunMode, "dry-run-mode", "d", false,
+		`dry run mode only. (e.g. "-d")`,
+	)
+
 	command.PersistentFlags().StringVarP(&organization, "organization",
 		"o", "", requiredPrefix+"Name of Terraform Cloud Organization")
 	if err := command.MarkPersistentFlagRequired("organization"); err != nil {

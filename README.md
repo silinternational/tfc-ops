@@ -226,6 +226,23 @@ Global Flags:
 
 ```
 
+### Variables Delete Help
+```text
+Delete variables in matching workspaces having the specified key
+
+Usage:
+  tfc-ops variables delete [flags]
+
+Flags:
+  -h, --help         help for delete
+  -k, --key string   required - Terraform variable key to delete, must match exactly
+
+Global Flags:
+  -d, --dry-run-mode          dry run mode only. (e.g. "-d")
+  -o, --organization string   required - Name of Terraform Cloud Organization
+  -w, --workspace string      Name of the Workspace in Terraform Cloud
+```
+
 ## License
 tfc-ops is released under the Apache 2.0 license. See 
 [LICENSE](https://github.com/silinternational/tfc-ops/blob/main/LICENSE)

@@ -28,5 +28,8 @@ var variablesCmd = &cobra.Command{
 
 func init() {
 	rootCmd.AddCommand(variablesCmd)
-	makeOrgFlagRequired(variablesCmd)
+	addGlobalFlags(variablesCmd)
+	variablesCmd.PersistentFlags().StringVarP(&workspace, "workspace", "w", "",
+		`Name of the Workspace in Terraform Cloud`,
+	)
 }

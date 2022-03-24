@@ -70,14 +70,11 @@ func init() {
 		"required if value_contains is blank - string contained in the Terraform variable keys to report on")
 	variablesListCmd.Flags().StringVarP(&valueContains, "value_contains", "v", "",
 		"required if key_contains is blank - string contained in the Terraform variable values to report on")
-	variablesListCmd.Flags().StringVarP(&workspace, "workspace", "w", "",
-		`Name of the Workspace in Terraform Cloud`,
-	)
 }
 
 func runVariablesList() {
 	if workspace != "" {
-		vars, err := api.GetMatchingVars(organization, workspace, atlasToken, keyContains, valueContains)
+		vars, err := api.SearchVariables(organization, workspace, atlasToken, keyContains, valueContains)
 		if err != nil {
 			println(err.Error())
 			return
@@ -85,13 +82,13 @@ func runVariablesList() {
 		printWorkspaceVars(workspace, vars)
 		return
 	}
-	allData, err := api.GetAllWorkspaceData(organization, atlasToken)
+	allData, err := api.GetAllWorkspaces(organization, atlasToken)
 	if err != nil {
 		println(err.Error())
 		return
 	}
 
-	wsVars, err := api.GetAllWorkSpacesVars(allData, organization, keyContains, valueContains, atlasToken)
+	wsVars, err := api.SearchVarsInAllWorkspaces(allData, organization, keyContains, valueContains, atlasToken)
 	if err != nil {
 		println(err.Error())
 		return

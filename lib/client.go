@@ -316,7 +316,8 @@ func GetUpdateVariablePayload(organization, workspaceName, variableID string, tf
 `, variableID, tfVar.Key, tfVar.Value, tfVar.Hcl, tfVar.Sensitive, organization, workspaceName)
 }
 
-func GetAllWorkspaceData(organization, tfToken string) ([]WorkspaceData, error) {
+// GetAllWorkspaces retrieves all workspaces from Terraform Cloud
+func GetAllWorkspaces(organization, tfToken string) ([]WorkspaceData, error) {
 	u := NewTfcUrl(fmt.Sprintf("/organizations/%s/workspaces", organization))
 	u.SetParam(paramPageSize, strconv.Itoa(pageSize))
 
@@ -384,6 +385,21 @@ func GetWorkspaceData(organization, workspaceName, tfToken string) (WorkspaceJSO
 	return wsData, nil
 }
 
+func GetWorkspaceVar(organization, wsName, tfToken, key string) (*Var, error) {
+	vars, err := GetVarsFromWorkspace(organization, wsName, tfToken)
+	if err != nil {
+		return nil, fmt.Errorf("Error getting variables for %s:%s\n%w", organization, wsName, err)
+	}
+
+	for _, v := range vars {
+		if v.Key == key {
+			found := v
+			return &found, nil
+		}
+	}
+	return nil, nil
+}
+
 // GetVarsFromWorkspace returns a list of Terraform variables for a given workspace
 func GetVarsFromWorkspace(organization, workspaceName, tfToken string) ([]Var, error) {
 	u := NewTfcUrl("/vars")
@@ -415,13 +431,27 @@ func GetVarsFromWorkspace(organization, workspaceName, tfToken string) ([]Var, e
 	return variables, nil
 }
 
-func GetAllWorkSpacesVars(wsData []WorkspaceData, organization, keyContains, valueContains, tfToken string) (map[string][]Var, error) {
+// DeleteVariable deletes a variable from a workspace
+func DeleteVariable(variableID, tfToken string) {
+	u := NewTfcUrl("/vars/" + variableID)
+
+	headers := map[string]string{
+		"Authorization": "Bearer " + tfToken,
+		"Content-Type":  "application/vnd.api+json",
+	}
+	resp := callAPI(http.MethodDelete, u.String(), "", headers)
+	_ = resp.Body.Close()
+}
+
+// SearchVarsInAllWorkspaces returns all the variables that match the search terms 'keyContains' and 'valueContains'
+// in all workspaces given. The return value is a map of variable lists with the workspace name as the key.
+func SearchVarsInAllWorkspaces(wsData []WorkspaceData, organization, keyContains, valueContains, tfToken string) (map[string][]Var, error) {
 	allVars := map[string][]Var{}
 
 	for _, ws := range wsData {
 		wsName := ws.Attributes.Name
 
-		wsVars, err := GetMatchingVars(organization, wsName, tfToken, keyContains, valueContains)
+		wsVars, err := SearchVariables(organization, wsName, tfToken, keyContains, valueContains)
 		if err != nil {
 			return nil, err
 		}
@@ -431,7 +461,9 @@ func GetAllWorkSpacesVars(wsData []WorkspaceData, organization, keyContains, val
 	return allVars, nil
 }
 
-func GetMatchingVars(organization string, wsName string, tfToken string, keyContains string, valueContains string) ([]Var, error) {
+// SearchVariables returns a list of variables in the given workspace that match the search terms
+// 'keyContains' and 'valueContains'
+func SearchVariables(organization, wsName, tfToken, keyContains, valueContains string) ([]Var, error) {
 	vars, err := GetVarsFromWorkspace(organization, wsName, tfToken)
 	if err != nil {
 		err := fmt.Errorf("Error getting variables for %s:%s\n%s", organization, wsName, err.Error())

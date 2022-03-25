@@ -127,6 +127,10 @@ func init() {
 }
 
 func runClone(cfg cloner.CloneConfig) {
+	if readOnlyMode {
+		fmt.Println("read-only mode enabled, no workspace will be created")
+	}
+
 	cfg.AtlasTokenDestination = os.Getenv("ATLAS_TOKEN_DESTINATION")
 	if cfg.AtlasTokenDestination == "" {
 		cfg.AtlasTokenDestination = os.Getenv("ATLAS_TOKEN")

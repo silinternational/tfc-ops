@@ -753,6 +753,10 @@ func CloneWorkspace(cfg CloneConfig) ([]string, error) {
 		tfVars = append(tfVars, tfVar)
 	}
 
+	if config.readOnly {
+		return sensitiveVars, nil
+	}
+
 	if cfg.DifferentDestinationAccount {
 		config.token = cfg.AtlasTokenDestination
 		if _, err := CreateWorkspace(oc, cfg.NewVCSTokenID); err != nil {

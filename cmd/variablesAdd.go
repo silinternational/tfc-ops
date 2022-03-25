@@ -83,6 +83,7 @@ func addWorkspaceVar(org, ws, key, value string) bool {
 		if _, err := lib.AddOrUpdateVariable(lib.UpdateConfig{
 			Organization:          organization,
 			Workspace:             ws,
+			SearchString:          key,
 			NewValue:              value,
 			AddKeyIfNotFound:      true,
 			SearchOnVariableValue: false,

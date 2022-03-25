@@ -33,7 +33,6 @@ var updateCmd = &cobra.Command{
 		}
 		config := lib.UpdateConfig{
 			Organization:          organization,
-			NewOrganization:       newOrganization,
 			Workspace:             workspace,
 			SearchString:          variableSearchString,
 			NewValue:              newVariableValue,

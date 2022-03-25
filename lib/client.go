@@ -34,7 +34,6 @@ import (
 
 type UpdateConfig struct {
 	Organization          string
-	NewOrganization       string
 	Workspace             string
 	SearchString          string //  must be an exact case-insensitive match (i.e. not a partial match)
 	NewValue              string

@@ -111,12 +111,11 @@ func init() {
 		false,
 		`optional (e.g. "-c=true") whether to copy the values of the Source Workspace variables.`,
 	)
-	cloneCmd.Flags().BoolVarP(
+	cloneCmd.Flags().BoolVar(
 		&differentDestinationAccount,
 		"differentDestinationAccount",
-		"d",
 		false,
-		`optional (e.g. "-d=true") whether to clone to a different TF account.`,
+		`optional (e.g. "--differentDestinationAccount") whether to clone to a different TF account.`,
 	)
 	if err := cloneCmd.MarkFlagRequired("source-workspace"); err != nil {
 		errLog.Fatalln(err)

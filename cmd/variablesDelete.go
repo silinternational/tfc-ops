@@ -26,8 +26,8 @@ var key string
 
 var variablesDeleteCmd = &cobra.Command{
 	Use:   "delete",
-	Short: "Delete variables",
-	Long:  `Delete variables in matching workspaces having the specified key`,
+	Short: "Delete variable",
+	Long:  `Delete variable in matching workspace having the specified key`,
 	Args:  cobra.ExactArgs(0),
 	Run: func(cmd *cobra.Command, args []string) {
 		runVariablesDelete()

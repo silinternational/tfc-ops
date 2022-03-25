@@ -12,7 +12,7 @@ func EnableDebug() {
 	config.debug = true
 }
 
-func EnableDryRunMode() {
+func EnableReadOnlyMode() {
 	config.readOnly = true
 }
 

@@ -47,8 +47,8 @@ func init() {
 }
 
 func runVariablesAdd() {
-	if dryRunMode {
-		fmt.Println("Dry run mode enabled. No variables will be added.")
+	if readOnlyMode {
+		fmt.Println("Read only mode enabled. No variables will be added.")
 	}
 
 	if workspace != "" {
@@ -79,7 +79,7 @@ func addWorkspaceVar(org, ws, key, value string) bool {
 	}
 
 	fmt.Printf("Adding variable '%s' to workspace '%s' with value '%s'\n", key, ws, value)
-	if !dryRunMode {
+	if !readOnlyMode {
 		if _, err := lib.AddOrUpdateVariable(lib.UpdateConfig{
 			Organization:          organization,
 			Workspace:             ws,

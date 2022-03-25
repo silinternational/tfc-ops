@@ -49,8 +49,8 @@ func init() {
 }
 
 func runVarsetsApply(name string) {
-	if dryRunMode {
-		fmt.Println("Dry run mode enabled. No variable set will be applied.")
+	if readOnlyMode {
+		fmt.Println("Read only mode enabled. No variable set will be applied.")
 	}
 
 	if workspace == "" && workspaceFilter == "" {

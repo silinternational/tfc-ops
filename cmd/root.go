@@ -32,7 +32,7 @@ const requiredPrefix = "required - "
 var (
 	cfgFile      string
 	organization string
-	dryRunMode   bool
+	readOnlyMode bool
 	errLog       *log.Logger
 )
 
@@ -72,8 +72,8 @@ func initRoot(cmd *cobra.Command, args []string) {
 		lib.EnableDebug()
 	}
 
-	if dryRunMode {
-		lib.EnableDryRunMode()
+	if readOnlyMode {
+		lib.EnableReadOnlyMode()
 	}
 }
 
@@ -104,8 +104,8 @@ func initConfig() {
 }
 
 func addGlobalFlags(command *cobra.Command) {
-	command.PersistentFlags().BoolVarP(&dryRunMode, "dry-run-mode", "d", false,
-		`dry run mode only. (e.g. "-d")`,
+	command.PersistentFlags().BoolVarP(&readOnlyMode, "read-only-mode", "r", false,
+		`read-only mode (e.g. "-r")`,
 	)
 
 	command.PersistentFlags().StringVarP(&organization, "organization",

@@ -44,8 +44,8 @@ func init() {
 }
 
 func runVariablesDelete() {
-	if dryRunMode {
-		fmt.Println("Dry run mode enabled. No variables will be deleted.")
+	if readOnlyMode {
+		fmt.Println("Read only mode enabled. No variables will be deleted.")
 	}
 
 	if workspace != "" {
@@ -80,7 +80,7 @@ func deleteWorkspaceVar(org, ws, key string) bool {
 	}
 
 	fmt.Printf("Deleting variable %s from workspace %s\n", v.Key, ws)
-	if !dryRunMode {
+	if !readOnlyMode {
 		lib.DeleteVariable(v.ID)
 	}
 	return true

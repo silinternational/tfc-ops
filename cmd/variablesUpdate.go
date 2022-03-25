@@ -79,14 +79,28 @@ func init() {
 		`optional (e.g. "-v=true") whether to do the search based on the value of the variables. (Must be false if add-key-if-not-found is true`,
 	)
 	updateCmd.Flags().BoolVarP(
+		&readOnlyMode,
+		"dry-run-mode",
+		"d",
+		false,
+		`optional (e.g. "-d=true") dry run mode only.`,
+	)
+	if err := updateCmd.Flags().MarkDeprecated("dry-run-mode", "use -r for read-only-mode"); err != nil {
+		errLog.Fatalln(err)
+	}
+	updateCmd.Flags().BoolVarP(
 		&sensitiveVariable,
 		"sensitive-variable",
 		"x",
 		false,
 		`optional (e.g. "-x=true") make the variable sensitive.`,
 	)
-	updateCmd.MarkFlagRequired("variable-search-string")
-	updateCmd.MarkFlagRequired("new-variable-value")
+	if err := updateCmd.MarkFlagRequired("variable-search-string"); err != nil {
+		errLog.Fatalln(err)
+	}
+	if err := updateCmd.MarkFlagRequired("new-variable-value"); err != nil {
+		errLog.Fatalln(err)
+	}
 }
 
 func runVariablesUpdate(cfg lib.UpdateConfig) {
@@ -98,8 +112,8 @@ func runVariablesUpdate(cfg lib.UpdateConfig) {
 		cfg.SearchOnVariableValue = false
 	}
 
-	if dryRunMode {
-		println("\n ****  DRY RUN MODE  ****")
+	if readOnlyMode {
+		println("\n ****  READ ONLY MODE  ****")
 	}
 	fmt.Printf("update variable called using %s, %s, search string: %s, new value: %s, add-key-if-not-found: %t, search-on-variable-value: %t\n",
 		cfg.Organization, cfg.Workspace, cfg.SearchString, cfg.NewValue, cfg.AddKeyIfNotFound, cfg.SearchOnVariableValue)

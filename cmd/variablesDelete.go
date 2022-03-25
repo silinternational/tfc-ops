@@ -51,7 +51,7 @@ func runVariablesDelete() {
 	if workspace != "" {
 		found := deleteWorkspaceVar(organization, workspace, key)
 		if !found {
-			fmt.Printf("Variable %s not found in workspace %s\n", key, workspace)
+			errLog.Fatalf("Variable %s not found in workspace %s\n", key, workspace)
 		}
 		return
 	}

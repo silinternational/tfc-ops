@@ -118,8 +118,12 @@ func init() {
 		false,
 		`optional (e.g. "-d=true") whether to clone to a different TF account.`,
 	)
-	cloneCmd.MarkFlagRequired("source-workspace")
-	cloneCmd.MarkFlagRequired("new-workspace")
+	if err := cloneCmd.MarkFlagRequired("source-workspace"); err != nil {
+		errLog.Fatalln(err)
+	}
+	if err := cloneCmd.MarkFlagRequired("new-workspace"); err != nil {
+		errLog.Fatalln(err)
+	}
 }
 
 func runClone(cfg cloner.CloneConfig) {

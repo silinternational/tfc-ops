@@ -42,26 +42,30 @@ var variablesListCmd = &cobra.Command{
 			os.Exit(1)
 		}
 
-		keyMsg := ""
-		valMsg := ""
+		if tabularCSV {
+			fmt.Println("workspace,key,value")
+		} else {
+			keyMsg := ""
+			valMsg := ""
 
-		if keyContains != "" {
-			keyMsg = " key containing " + keyContains
-		}
-
-		if valueContains != "" {
-			valMsg = " value containing " + valueContains
 			if keyContains != "" {
-				valMsg = " or value containing " + valueContains
+				keyMsg = " key containing " + keyContains
 			}
-		}
 
-		wsMsg := workspace
-		if wsMsg == "" {
-			wsMsg = "all workspaces"
-		}
-		if !tabularCSV {
-			fmt.Printf("Getting variables from %s with%s%s\n", wsMsg, keyMsg, valMsg)
+			if valueContains != "" {
+				valMsg = " value containing " + valueContains
+				if keyContains != "" {
+					valMsg = " or value containing " + valueContains
+				}
+			}
+
+			wsMsg := workspace
+			if wsMsg == "" {
+				wsMsg = "all workspaces"
+			}
+			if !tabularCSV {
+				fmt.Printf("Getting variables from %s with%s%s\n", wsMsg, keyMsg, valMsg)
+			}
 		}
 		runVariablesList()
 	},
@@ -97,10 +101,6 @@ func runVariablesList() {
 	if err != nil {
 		println(err.Error())
 		return
-	}
-
-	if tabularCSV {
-		fmt.Println("workspace,key,value")
 	}
 
 	for ws, vs := range wsVars {

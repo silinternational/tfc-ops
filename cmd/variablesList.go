@@ -74,7 +74,7 @@ func init() {
 
 func runVariablesList() {
 	if workspace != "" {
-		vars, err := api.SearchVariables(organization, workspace, atlasToken, keyContains, valueContains)
+		vars, err := api.SearchVariables(organization, workspace, keyContains, valueContains)
 		if err != nil {
 			println(err.Error())
 			return
@@ -82,13 +82,13 @@ func runVariablesList() {
 		printWorkspaceVars(workspace, vars)
 		return
 	}
-	allData, err := api.GetAllWorkspaces(organization, atlasToken)
+	allData, err := api.GetAllWorkspaces(organization)
 	if err != nil {
 		println(err.Error())
 		return
 	}
 
-	wsVars, err := api.SearchVarsInAllWorkspaces(allData, organization, keyContains, valueContains, atlasToken)
+	wsVars, err := api.SearchVarsInAllWorkspaces(allData, organization, keyContains, valueContains)
 	if err != nil {
 		println(err.Error())
 		return

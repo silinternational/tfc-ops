@@ -16,7 +16,7 @@ package cmd
 
 import (
 	"fmt"
-	"os"
+	"log"
 
 	"github.com/spf13/cobra"
 
@@ -55,7 +55,13 @@ func init() {
 	workspaceUpdateCmd.Flags().StringVarP(&value, flagValue, "v", "",
 		requiredPrefix+"Value")
 	workspaceUpdateCmd.Flags().StringVarP(&workspaceFilter, flagWorkspaceFilter, "w", "",
-		requiredPrefix+"Workspace filter")
+		requiredPrefix+"Partial workspace name to search across all workspaces")
+	workspaceUpdateCmd.Flags().BoolVarP(&readOnlyMode, "dry-run-mode", "d", false,
+		`dry run mode only. (e.g. "-d")`,
+	)
+	if err := updateCmd.Flags().MarkDeprecated("dry-run-mode", "use -r for read-only-mode"); err != nil {
+		errLog.Fatalln(err)
+	}
 	requiredFlags := []string{flagAttribute, flagValue, flagWorkspaceFilter}
 	for _, flag := range requiredFlags {
 		if err := workspaceUpdateCmd.MarkFlagRequired(flag); err != nil {
@@ -65,13 +71,12 @@ func init() {
 }
 
 func runWorkspaceUpdate() {
-	lib.UpdateWorkspace(lib.WorkspaceUpdateParams{
+	if err := lib.UpdateWorkspace(lib.WorkspaceUpdateParams{
 		Organization:    organization,
 		WorkspaceFilter: workspaceFilter,
-		Token:           os.Getenv("ATLAS_TOKEN"),
 		Attribute:       attribute,
 		Value:           value,
-		DryRunMode:      dryRunMode,
-		Debug:           debug,
-	})
+	}); err != nil {
+		log.Fatalln(err.Error())
+	}
 }

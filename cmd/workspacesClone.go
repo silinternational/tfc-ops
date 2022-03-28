@@ -118,20 +118,27 @@ func init() {
 		false,
 		`optional (e.g. "-d=true") whether to clone to a different TF account.`,
 	)
-	cloneCmd.MarkFlagRequired("source-workspace")
-	cloneCmd.MarkFlagRequired("new-workspace")
+	if err := cloneCmd.MarkFlagRequired("source-workspace"); err != nil {
+		errLog.Fatalln(err)
+	}
+	if err := cloneCmd.MarkFlagRequired("new-workspace"); err != nil {
+		errLog.Fatalln(err)
+	}
 }
 
 func runClone(cfg cloner.CloneConfig) {
+	if readOnlyMode {
+		fmt.Println("read-only mode enabled, no workspace will be created")
+	}
+
 	cfg.AtlasTokenDestination = os.Getenv("ATLAS_TOKEN_DESTINATION")
 	if cfg.AtlasTokenDestination == "" {
-		cfg.AtlasTokenDestination = atlasToken
+		cfg.AtlasTokenDestination = os.Getenv("ATLAS_TOKEN")
 		fmt.Print("Info: ATLAS_TOKEN_DESTINATION is not set, using ATLAS_TOKEN for destination account.\n\n")
 	}
 
 	fmt.Printf("clone called using %s, %s, %s, copyState: %t, copyVariables: %t, differentDestinationAccount: %t\n",
 		cfg.Organization, cfg.SourceWorkspace, cfg.NewWorkspace, cfg.CopyState, cfg.CopyVariables, cfg.DifferentDestinationAccount)
-	cfg.AtlasToken = atlasToken
 
 	sensitiveVars, err := cloner.CloneWorkspace(cfg)
 	if err != nil {

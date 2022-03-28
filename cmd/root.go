@@ -16,30 +16,32 @@ package cmd
 
 import (
 	"fmt"
+	"log"
 	"os"
+	"strings"
 
 	"github.com/mitchellh/go-homedir"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
+
+	"github.com/silinternational/tfc-ops/lib"
 )
 
 const requiredPrefix = "required - "
 
 var (
-	atlasToken   string
 	cfgFile      string
-	debug        bool
 	organization string
+	readOnlyMode bool
+	errLog       *log.Logger
 )
 
 // rootCmd represents the base command when called without any subcommands
 var rootCmd = &cobra.Command{
-	Use:   "tfc-ops",
-	Short: "Terraform Cloud operations",
-	Long:  `Perform TF Cloud operations, e.g. clone a workspace or manage variables within a workspace`,
-	// Uncomment the following line if your bare application
-	// has an action associated with it:
-	//	Run: func(cmd *cobra.Command, args []string) { },
+	Use:              "tfc-ops",
+	Short:            "Terraform Cloud operations",
+	Long:             `Perform TF Cloud operations, e.g. clone a workspace or manage variables within a workspace`,
+	PersistentPreRun: initRoot,
 }
 
 // Execute adds all child commands to the root command and sets flags appropriately.
@@ -54,27 +56,24 @@ func Execute() {
 func init() {
 	cobra.OnInitialize(initConfig)
 
-	// Cobra also supports local flags, which will only run
-	// when this action is called directly.
-	// rootCmd.Flags().BoolP("toggle", "t", false, "Help message for toggle")
+	errLog = log.New(os.Stderr, "", 0)
+}
 
-	foundError := false
-
+func initRoot(cmd *cobra.Command, args []string) {
 	// Get Tokens from env vars
-	atlasToken = os.Getenv("ATLAS_TOKEN")
+	atlasToken := os.Getenv("ATLAS_TOKEN")
 	if atlasToken == "" {
-		fmt.Println("Error: Environment variable for ATLAS_TOKEN is required to execute plan and migration")
-		fmt.Println("")
-		foundError = true
+		errLog.Fatalln("Error: Environment variable for ATLAS_TOKEN is required to execute plan and migration")
 	}
+	lib.SetToken(atlasToken)
 
 	debugStr := os.Getenv("TFC_OPS_DEBUG")
 	if debugStr == "TRUE" || debugStr == "true" {
-		debug = true
+		lib.EnableDebug()
 	}
 
-	if foundError {
-		os.Exit(1)
+	if readOnlyMode {
+		lib.EnableReadOnlyMode()
 	}
 }
 
@@ -105,8 +104,8 @@ func initConfig() {
 }
 
 func addGlobalFlags(command *cobra.Command) {
-	command.PersistentFlags().BoolVarP(&dryRunMode, "dry-run-mode", "d", false,
-		`dry run mode only. (e.g. "-d")`,
+	command.PersistentFlags().BoolVarP(&readOnlyMode, "read-only-mode", "r", false,
+		`read-only mode (e.g. "-r")`,
 	)
 
 	command.PersistentFlags().StringVarP(&organization, "organization",
@@ -114,4 +113,31 @@ func addGlobalFlags(command *cobra.Command) {
 	if err := command.MarkPersistentFlagRequired("organization"); err != nil {
 		panic("MarkPersistentFlagRequired failed with error " + err.Error())
 	}
+}
+
+func stringMapToSlice(m map[string]string) ([]string, []string) {
+	keys := make([]string, len(m))
+	values := make([]string, len(m))
+	i := 0
+	for k, v := range m {
+		keys[i] = k
+		values[i] = v
+		i++
+	}
+	return keys, values
+}
+
+func workspaceListToString(wsNames []string) string {
+	if len(wsNames) == 0 {
+		return ""
+	}
+
+	s := ""
+	if len(wsNames) > 1 {
+		s = "workspaces: " + strings.Join(wsNames, ", ")
+	} else {
+		s = "workspace '" + wsNames[0] + "'"
+	}
+
+	return s
 }

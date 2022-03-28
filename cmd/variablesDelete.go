@@ -16,7 +16,6 @@ package cmd
 
 import (
 	"fmt"
-	"log"
 
 	"github.com/spf13/cobra"
 
@@ -27,8 +26,8 @@ var key string
 
 var variablesDeleteCmd = &cobra.Command{
 	Use:   "delete",
-	Short: "Delete variables",
-	Long:  `Delete variables in matching workspaces having the specified key`,
+	Short: "Delete variable",
+	Long:  `Delete variable in matching workspace having the specified key`,
 	Args:  cobra.ExactArgs(0),
 	Run: func(cmd *cobra.Command, args []string) {
 		runVariablesDelete()
@@ -40,25 +39,25 @@ func init() {
 	variablesDeleteCmd.Flags().StringVarP(&key, "key", "k", "",
 		requiredPrefix+"Terraform variable key to delete, must match exactly")
 	if err := variablesDeleteCmd.MarkFlagRequired("key"); err != nil {
-		log.Fatalln("failed to mark 'key' as a required flag on variablesDeleteCmd: " + err.Error())
+		errLog.Fatalln("failed to mark 'key' as a required flag on variablesDeleteCmd: " + err.Error())
 	}
 }
 
 func runVariablesDelete() {
-	if dryRunMode {
-		fmt.Println("Dry run mode enabled. No variables will be deleted.")
+	if readOnlyMode {
+		fmt.Println("Read only mode enabled. No variables will be deleted.")
 	}
 
 	if workspace != "" {
 		found := deleteWorkspaceVar(organization, workspace, key)
 		if !found {
-			fmt.Printf("Variable %s not found in workspace %s\n", key, workspace)
+			errLog.Fatalf("Variable %s not found in workspace %s\n", key, workspace)
 		}
 		return
 	}
 
 	fmt.Printf("Deleting variables with key '%s' from all workspaces...\n", key)
-	allWorkspaces, err := lib.GetAllWorkspaces(organization, atlasToken)
+	allWorkspaces, err := lib.GetAllWorkspaces(organization)
 	if err != nil {
 		println(err.Error())
 		return
@@ -71,7 +70,7 @@ func runVariablesDelete() {
 }
 
 func deleteWorkspaceVar(org, ws, key string) bool {
-	v, err := lib.GetWorkspaceVar(org, ws, atlasToken, key)
+	v, err := lib.GetWorkspaceVar(org, ws, key)
 	if err != nil {
 		println(err.Error())
 		return false
@@ -81,8 +80,8 @@ func deleteWorkspaceVar(org, ws, key string) bool {
 	}
 
 	fmt.Printf("Deleting variable %s from workspace %s\n", v.Key, ws)
-	if !dryRunMode {
-		lib.DeleteVariable(v.ID, atlasToken)
+	if !readOnlyMode {
+		lib.DeleteVariable(v.ID)
 	}
 	return true
 }

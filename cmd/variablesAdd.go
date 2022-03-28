@@ -78,7 +78,7 @@ func addWorkspaceVar(org, ws, key, value string) bool {
 		return false
 	}
 
-	fmt.Printf("Adding variable '%s' to workspace '%s' with value '%s'\n", key, ws, value)
+	fmt.Printf("Workspace %s: Adding variable %s = %s\n", ws, key, value)
 	if !readOnlyMode {
 		if _, err := lib.AddOrUpdateVariable(lib.UpdateConfig{
 			Organization:          organization,

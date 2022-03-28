@@ -27,6 +27,7 @@ import (
 var (
 	keyContains   string
 	valueContains string
+	tabularCSV    bool
 )
 
 var variablesListCmd = &cobra.Command{
@@ -41,25 +42,31 @@ var variablesListCmd = &cobra.Command{
 			os.Exit(1)
 		}
 
-		keyMsg := ""
-		valMsg := ""
+		if tabularCSV {
+			fmt.Println("workspace,key,value")
+		} else {
+			keyMsg := ""
+			valMsg := ""
 
-		if keyContains != "" {
-			keyMsg = " key containing " + keyContains
-		}
-
-		if valueContains != "" {
-			valMsg = " value containing " + valueContains
 			if keyContains != "" {
-				valMsg = " or value containing " + valueContains
+				keyMsg = " key containing " + keyContains
+			}
+
+			if valueContains != "" {
+				valMsg = " value containing " + valueContains
+				if keyContains != "" {
+					valMsg = " or value containing " + valueContains
+				}
+			}
+
+			wsMsg := workspace
+			if wsMsg == "" {
+				wsMsg = "all workspaces"
+			}
+			if !tabularCSV {
+				fmt.Printf("Getting variables from %s with%s%s\n", wsMsg, keyMsg, valMsg)
 			}
 		}
-
-		wsMsg := workspace
-		if wsMsg == "" {
-			wsMsg = "all workspaces"
-		}
-		fmt.Printf("Getting variables from %s with%s%s\n", wsMsg, keyMsg, valMsg)
 		runVariablesList()
 	},
 }
@@ -70,6 +77,8 @@ func init() {
 		"required if value_contains is blank - string contained in the Terraform variable keys to report on")
 	variablesListCmd.Flags().StringVarP(&valueContains, "value_contains", "v", "",
 		"required if key_contains is blank - string contained in the Terraform variable values to report on")
+	variablesListCmd.Flags().BoolVar(&tabularCSV, "csv", false,
+		"output variable list in CSV format")
 }
 
 func runVariablesList() {
@@ -105,6 +114,10 @@ func printWorkspaceVars(ws string, vs []api.Var) {
 	if len(vs) == 0 {
 		return
 	}
+	if tabularCSV {
+		printWorkspaceVarsCSV(ws, vs)
+		return
+	}
 	w := tabwriter.NewWriter(os.Stdout, 0, 0, 1, ' ', tabwriter.Debug)
 	println()
 	fmt.Printf("Workspace: %s has %v matching variable(s)\n", ws, len(vs))
@@ -118,4 +131,14 @@ func printWorkspaceVars(ws string, vs []api.Var) {
 	}
 	println()
 	w.Flush()
+}
+
+func printWorkspaceVarsCSV(ws string, vs []api.Var) {
+	for _, v := range vs {
+		val := v.Value
+		if v.Sensitive {
+			val = "(sensitive)"
+		}
+		fmt.Printf(`"%s","%s","%s"\n`, ws, v.Key, val)
+	}
 }

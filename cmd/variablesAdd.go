@@ -24,8 +24,8 @@ import (
 
 var variablesAddCmd = &cobra.Command{
 	Use:   "add",
-	Short: "Add variable",
-	Long:  `Add variable in matching workspace having the specified key`,
+	Short: "Add new variable (if not already present)",
+	Long:  `Add variable in matching workspace. Will not update existing variable.`,
 	Args:  cobra.ExactArgs(0),
 	Run: func(cmd *cobra.Command, args []string) {
 		runVariablesAdd()

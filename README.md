@@ -177,7 +177,7 @@ Usage:
   tfc-ops variables [command]
 
 Available Commands:
-  add         Add variable
+  add         Add new variable (if not already present)
   delete      Delete variable
   list        Report on variables
   update      Update/add a variable in a Workspace

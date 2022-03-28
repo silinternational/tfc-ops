@@ -139,6 +139,6 @@ func printWorkspaceVarsCSV(ws string, vs []api.Var) {
 		if v.Sensitive {
 			val = "(sensitive)"
 		}
-		fmt.Printf("%s,%s,%s\n", ws, v.Key, val)
+		fmt.Printf(`"%s","%s","%s"\n`, ws, v.Key, val)
 	}
 }

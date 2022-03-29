@@ -144,6 +144,8 @@ func printWorkspaceVarsCSV(ws string, vs []api.Var) {
 	}
 }
 
+// escapeString escapes characters for CSV encoding, adding a backslash before a double-quote, and converting
+// a newline to `\n`
 func escapeString(s string) string {
 	tmp := strings.Replace(s, `"`, `\"`, -1)
 	return strings.Replace(tmp, "\n", `\n`, -1)

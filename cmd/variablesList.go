@@ -17,6 +17,7 @@ package cmd
 import (
 	"fmt"
 	"os"
+	"strings"
 	"text/tabwriter"
 
 	"github.com/spf13/cobra"
@@ -139,6 +140,13 @@ func printWorkspaceVarsCSV(ws string, vs []api.Var) {
 		if v.Sensitive {
 			val = "(sensitive)"
 		}
-		fmt.Printf(`"%s","%s","%s"\n`, ws, v.Key, val)
+		fmt.Printf(`"%s","%s","%s"`+"\n", escapeString(ws), escapeString(v.Key), escapeString(val))
 	}
+}
+
+// escapeString escapes characters for CSV encoding, adding a backslash before a double-quote, and converting
+// a newline to `\n`
+func escapeString(s string) string {
+	tmp := strings.Replace(s, `"`, `\"`, -1)
+	return strings.Replace(tmp, "\n", `\n`, -1)
 }

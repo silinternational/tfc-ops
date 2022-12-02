@@ -51,7 +51,7 @@ Get help about the command.
 
 List the workspaces with at least one of their attributes/pieces of data.
 
-```$ tfc-ops workspaces list -o=gtis -a=id,name,created-at,environment,working-directory,terraform-version,vcsrepo```
+```$ tfc-ops workspaces list -o=gtis -a=id,name,created-at,environment,working-directory,terraform-version,vcs-repo.identifier```
 
 ## Usage
 

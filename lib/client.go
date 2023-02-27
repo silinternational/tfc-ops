@@ -128,10 +128,10 @@ type Workspace struct {
 			} `json:"data"`
 		} `json:"organization"`
 		LatestRun struct {
-			Data interface{} `json:"data"`
+			Data any `json:"data"`
 		} `json:"latest-run"`
 		CurrentRun struct {
-			Data interface{} `json:"data"`
+			Data any `json:"data"`
 		} `json:"current-run"`
 	} `json:"relationships"`
 	Links struct {
@@ -927,8 +927,8 @@ func UpdateWorkspace(params WorkspaceUpdateParams) error {
 		fmt.Printf("Found %d workspace(s)\n", len(foundWs))
 	}
 
-	jsonObj := gabs.Wrap(map[string]interface{}{
-		"data": map[string]interface{}{
+	jsonObj := gabs.Wrap(map[string]any{
+		"data": map[string]any{
 			"type": "workspace",
 		},
 	})
@@ -958,7 +958,7 @@ func UpdateWorkspace(params WorkspaceUpdateParams) error {
 	return nil
 }
 
-func parseVal(value string) interface{} {
+func parseVal(value string) any {
 	if value == "null" {
 		return nil
 	}
@@ -1045,7 +1045,7 @@ func parseWorkspacePage(resp *http.Response, attributes []string) [][]string {
 	for i, ws := range wsAttributes {
 		attributeData[i] = make([]string, len(attributes))
 		for j, a := range attributes {
-			var v interface{}
+			var v any
 			if a == "id" {
 				v = parsed.Path(fmt.Sprintf("data.%d.id", i)).Data()
 			} else {
@@ -1120,11 +1120,11 @@ func GetVariableSet(org, vsName string) (*VariableSet, error) {
 type VariableSetList struct {
 	Data  []VariableSet `json:"data"`
 	Links struct {
-		Self  string      `json:"self"`
-		First string      `json:"first"`
-		Prev  interface{} `json:"prev"`
-		Next  interface{} `json:"next"`
-		Last  string      `json:"last"`
+		Self  string `json:"self"`
+		First string `json:"first"`
+		Prev  any    `json:"prev"`
+		Next  any    `json:"next"`
+		Last  string `json:"last"`
 	} `json:"links"`
 }
 
@@ -1150,7 +1150,7 @@ func ApplyVariableSet(varsetID string, workspaceIDs []string) error {
 		return fmt.Errorf("ArrayOfSize failed in ApplyVariableSet: %w", err)
 	}
 	for i, id := range workspaceIDs {
-		if _, err := data.S("data").SetIndex(map[string]interface{}{
+		if _, err := data.S("data").SetIndex(map[string]any{
 			"type": "workspace",
 			"id":   id,
 		}, i); err != nil {

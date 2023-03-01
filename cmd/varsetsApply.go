@@ -54,7 +54,7 @@ func runVarsetsApply(name string) {
 	}
 
 	if workspace == "" && workspaceFilter == "" {
-		errLog.Fatalln("Either -w or --workspace-filter must be specified.")
+		errLog.Fatalln("Either --workspace or --workspace-filter must be specified.")
 	}
 
 	var workspaceNames map[string]string

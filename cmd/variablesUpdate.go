@@ -2,15 +2,13 @@ package cmd
 
 import (
 	"fmt"
-	"log"
 	"os"
 	"strings"
 
 	"github.com/manifoldco/promptui"
 	"github.com/spf13/cobra"
 
-	api "github.com/silinternational/tfc-ops/lib"
-	updater "github.com/silinternational/tfc-ops/lib"
+	"github.com/silinternational/tfc-ops/lib"
 )
 
 var (
@@ -19,30 +17,27 @@ var (
 	newVariableValue      string
 	searchOnVariableValue bool
 	addKeyIfNotFound      bool
-	dryRunMode            bool
 	sensitiveVariable     bool
 )
 
 // cloneCmd represents the clone command
 var updateCmd = &cobra.Command{
 	Use:   "update",
-	Short: "Update/add a variable in a V2 Workspace",
-	Long:  `Update or add a variable in a TF Enterprise Version 2 Workspace based on a complete case-insensitive match`,
+	Short: "Update/add a variable in a Workspace",
+	Long:  `Update or add a variable in a Terraform Cloud Workspace based on a complete case-insensitive match`,
 	Args:  cobra.ExactArgs(0),
 	Run: func(cmd *cobra.Command, args []string) {
 		if addKeyIfNotFound && searchOnVariableValue {
 			fmt.Println("Error: The 'add-key-if-not-found' flag may not be used with the 'search-on-variable-value' flag")
 			os.Exit(1)
 		}
-		config := updater.V2UpdateConfig{
+		config := lib.UpdateConfig{
 			Organization:          organization,
-			NewOrganization:       newOrganization,
 			Workspace:             workspace,
 			SearchString:          variableSearchString,
 			NewValue:              newVariableValue,
 			SearchOnVariableValue: searchOnVariableValue,
 			AddKeyIfNotFound:      addKeyIfNotFound,
-			DryRunMode:            dryRunMode,
 			SensitiveVariable:     sensitiveVariable,
 		}
 		if workspace == "" {
@@ -55,13 +50,6 @@ var updateCmd = &cobra.Command{
 
 func init() {
 	variablesCmd.AddCommand(updateCmd)
-	updateCmd.Flags().StringVarP(
-		&workspace,
-		"workspace",
-		"w",
-		"",
-		`Name of the Workspace in TF Enterprise (version 2)`,
-	)
 	updateCmd.Flags().StringVarP(
 		&variableSearchString,
 		"variable-search-string",
@@ -91,12 +79,15 @@ func init() {
 		`optional (e.g. "-v=true") whether to do the search based on the value of the variables. (Must be false if add-key-if-not-found is true`,
 	)
 	updateCmd.Flags().BoolVarP(
-		&dryRunMode,
+		&readOnlyMode,
 		"dry-run-mode",
 		"d",
 		false,
 		`optional (e.g. "-d=true") dry run mode only.`,
 	)
+	if err := updateCmd.Flags().MarkDeprecated("dry-run-mode", "use -r for read-only-mode"); err != nil {
+		errLog.Fatalln(err)
+	}
 	updateCmd.Flags().BoolVarP(
 		&sensitiveVariable,
 		"sensitive-variable",
@@ -104,11 +95,15 @@ func init() {
 		false,
 		`optional (e.g. "-x=true") make the variable sensitive.`,
 	)
-	updateCmd.MarkFlagRequired("variable-search-string")
-	updateCmd.MarkFlagRequired("new-variable-value")
+	if err := updateCmd.MarkFlagRequired("variable-search-string"); err != nil {
+		errLog.Fatalln(err)
+	}
+	if err := updateCmd.MarkFlagRequired("new-variable-value"); err != nil {
+		errLog.Fatalln(err)
+	}
 }
 
-func runVariablesUpdate(cfg updater.V2UpdateConfig) {
+func runVariablesUpdate(cfg lib.UpdateConfig) {
 	if cfg.AddKeyIfNotFound {
 		if cfg.SearchOnVariableValue {
 			println("update variable aborted. Because addKeyIfNotFound was true, searchOnVariableValue must be set to false")
@@ -117,14 +112,13 @@ func runVariablesUpdate(cfg updater.V2UpdateConfig) {
 		cfg.SearchOnVariableValue = false
 	}
 
-	if cfg.DryRunMode {
-		println("\n ****  DRY RUN MODE  ****")
+	if readOnlyMode {
+		println("\n ****  READ ONLY MODE  ****")
 	}
 	fmt.Printf("update variable called using %s, %s, search string: %s, new value: %s, add-key-if-not-found: %t, search-on-variable-value: %t\n",
 		cfg.Organization, cfg.Workspace, cfg.SearchString, cfg.NewValue, cfg.AddKeyIfNotFound, cfg.SearchOnVariableValue)
-	cfg.AtlasToken = atlasToken
 
-	message, err := updater.AddOrUpdateV2Variable(cfg)
+	message, err := lib.AddOrUpdateVariable(cfg)
 	if err != nil {
 		fmt.Println(err.Error())
 		return
@@ -134,8 +128,8 @@ func runVariablesUpdate(cfg updater.V2UpdateConfig) {
 	println(message)
 }
 
-func runVariablesUpdateAll(cfg updater.V2UpdateConfig) {
-	allData, err := api.GetV2AllWorkspaceData(organization, atlasToken)
+func runVariablesUpdateAll(cfg lib.UpdateConfig) {
+	allData, err := lib.GetAllWorkspaces(organization)
 	for _, ws := range allData {
 		value, err := ws.AttributeByLabel(strings.Trim("name", " "))
 		fmt.Printf("Do you want to update the variable %s across the workspace: %s\n\n", variableSearchString, value)
@@ -163,7 +157,7 @@ func awaitUserResponse() bool {
 	}
 	_, result, err := prompt.Run()
 	if err != nil {
-		log.Fatalf("Prompt failed %v\n", err)
+		errLog.Fatalf("Prompt failed %v\n", err)
 	}
 	return result == "Yes"
 }

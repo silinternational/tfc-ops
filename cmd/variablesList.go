@@ -1,4 +1,4 @@
-// Copyright © 2018-2021 SIL International
+// Copyright © 2018-2022 SIL International
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -17,6 +17,7 @@ package cmd
 import (
 	"fmt"
 	"os"
+	"strings"
 	"text/tabwriter"
 
 	"github.com/spf13/cobra"
@@ -27,6 +28,7 @@ import (
 var (
 	keyContains   string
 	valueContains string
+	tabularCSV    bool
 )
 
 var variablesListCmd = &cobra.Command{
@@ -41,25 +43,31 @@ var variablesListCmd = &cobra.Command{
 			os.Exit(1)
 		}
 
-		keyMsg := ""
-		valMsg := ""
+		if tabularCSV {
+			fmt.Println("workspace,key,value")
+		} else {
+			keyMsg := ""
+			valMsg := ""
 
-		if keyContains != "" {
-			keyMsg = " key containing " + keyContains
-		}
-
-		if valueContains != "" {
-			valMsg = " value containing " + valueContains
 			if keyContains != "" {
-				valMsg = " or value containing " + valueContains
+				keyMsg = " key containing " + keyContains
+			}
+
+			if valueContains != "" {
+				valMsg = " value containing " + valueContains
+				if keyContains != "" {
+					valMsg = " or value containing " + valueContains
+				}
+			}
+
+			wsMsg := workspace
+			if wsMsg == "" {
+				wsMsg = "all workspaces"
+			}
+			if !tabularCSV {
+				fmt.Printf("Getting variables from %s with%s%s\n", wsMsg, keyMsg, valMsg)
 			}
 		}
-
-		wsMsg := workspace
-		if wsMsg == "" {
-			wsMsg = "all workspaces"
-		}
-		fmt.Printf("Getting variables from %s with%s%s\n", wsMsg, keyMsg, valMsg)
 		runVariablesList()
 	},
 }
@@ -70,14 +78,13 @@ func init() {
 		"required if value_contains is blank - string contained in the Terraform variable keys to report on")
 	variablesListCmd.Flags().StringVarP(&valueContains, "value_contains", "v", "",
 		"required if key_contains is blank - string contained in the Terraform variable values to report on")
-	variablesListCmd.Flags().StringVarP(&workspace, "workspace", "w", "",
-		`Name of the Workspace in TF Enterprise`,
-	)
+	variablesListCmd.Flags().BoolVar(&tabularCSV, "csv", false,
+		"output variable list in CSV format")
 }
 
 func runVariablesList() {
 	if workspace != "" {
-		vars, err := api.GetMatchingVarsFromV2(organization, workspace, atlasToken, keyContains, valueContains)
+		vars, err := api.SearchVariables(organization, workspace, keyContains, valueContains)
 		if err != nil {
 			println(err.Error())
 			return
@@ -85,13 +92,13 @@ func runVariablesList() {
 		printWorkspaceVars(workspace, vars)
 		return
 	}
-	allData, err := api.GetV2AllWorkspaceData(organization, atlasToken)
+	allData, err := api.GetAllWorkspaces(organization)
 	if err != nil {
 		println(err.Error())
 		return
 	}
 
-	wsVars, err := api.GetAllWorkSpacesVarsFromV2(allData, organization, keyContains, valueContains, atlasToken)
+	wsVars, err := api.SearchVarsInAllWorkspaces(allData, organization, keyContains, valueContains)
 	if err != nil {
 		println(err.Error())
 		return
@@ -104,8 +111,12 @@ func runVariablesList() {
 	return
 }
 
-func printWorkspaceVars(ws string, vs []api.V2Var) {
+func printWorkspaceVars(ws string, vs []api.Var) {
 	if len(vs) == 0 {
+		return
+	}
+	if tabularCSV {
+		printWorkspaceVarsCSV(ws, vs)
 		return
 	}
 	w := tabwriter.NewWriter(os.Stdout, 0, 0, 1, ' ', tabwriter.Debug)
@@ -121,4 +132,21 @@ func printWorkspaceVars(ws string, vs []api.V2Var) {
 	}
 	println()
 	w.Flush()
+}
+
+func printWorkspaceVarsCSV(ws string, vs []api.Var) {
+	for _, v := range vs {
+		val := v.Value
+		if v.Sensitive {
+			val = "(sensitive)"
+		}
+		fmt.Printf(`"%s","%s","%s"`+"\n", escapeString(ws), escapeString(v.Key), escapeString(val))
+	}
+}
+
+// escapeString escapes characters for CSV encoding, adding a backslash before a double-quote, and converting
+// a newline to `\n`
+func escapeString(s string) string {
+	tmp := strings.Replace(s, `"`, `\"`, -1)
+	return strings.Replace(tmp, "\n", `\n`, -1)
 }

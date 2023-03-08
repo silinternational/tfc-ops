@@ -1,4 +1,4 @@
 terraform {
-  backend "atlas" {
+  backend "remote" {
   }
 }

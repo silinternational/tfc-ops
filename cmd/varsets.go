@@ -18,18 +18,17 @@ import (
 	"github.com/spf13/cobra"
 )
 
-// variablesCmd represents the top level command for variables
-var variablesCmd = &cobra.Command{
-	Use:   "variables",
-	Short: "Update or List variables",
-	Long:  `Top level command to update or lists variables in all workspaces`,
+var variableSet string
+
+// varsetsCmd represents the top level command for varsets
+var varsetsCmd = &cobra.Command{
+	Use:   "varsets",
+	Short: "Commands for Variable Sets",
+	Long:  "Top level command for actions on Variable Sets",
 	Args:  cobra.MinimumNArgs(1),
 }
 
 func init() {
-	rootCmd.AddCommand(variablesCmd)
-	addGlobalFlags(variablesCmd)
-	variablesCmd.PersistentFlags().StringVarP(&workspace, "workspace", "w", "",
-		`Name of the Workspace in Terraform Cloud`,
-	)
+	rootCmd.AddCommand(varsetsCmd)
+	addGlobalFlags(varsetsCmd)
 }

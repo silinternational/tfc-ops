@@ -1,4 +1,4 @@
-// Copyright © 2018-2021 SIL International
+// Copyright © 2018-2022 SIL International
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -32,20 +32,17 @@ import (
 	"github.com/Jeffail/gabs/v2"
 )
 
-type V2UpdateConfig struct {
+type UpdateConfig struct {
 	Organization          string
-	NewOrganization       string
 	Workspace             string
-	AtlasToken            string
 	SearchString          string //  must be an exact case-insensitive match (i.e. not a partial match)
 	NewValue              string
 	AddKeyIfNotFound      bool // If true, then SearchOnVariableValue will be treated as false
 	SearchOnVariableValue bool // If false, then will filter on variable key
-	DryRunMode            bool
 	SensitiveVariable     bool // Whether to mark the variable as sensitive
 }
 
-type V2CloneConfig struct {
+type CloneConfig struct {
 	Organization                string
 	NewOrganization             string
 	SourceWorkspace             string
@@ -58,8 +55,8 @@ type V2CloneConfig struct {
 	DifferentDestinationAccount bool
 }
 
-// V2Var is what is returned by the api for one variable
-type V2Var struct {
+// Var is what is returned by the api for one variable
+type Var struct {
 	ID        string `json:"-"`
 	Key       string `json:"key"`
 	Value     string `json:"value"`
@@ -68,12 +65,12 @@ type V2Var struct {
 	Hcl       bool   `json:"hcl"`
 }
 
-// V2VarsResponse is what is returned by the api when requesting the variables of a workspace
-type V2VarsResponse struct {
+// VarsResponse is what is returned by the api when requesting the variables of a workspace
+type VarsResponse struct {
 	Data []struct {
 		ID            string `json:"id"`
 		Type          string `json:"type"`
-		Variable      V2Var  `json:"attributes"`
+		Variable      Var    `json:"attributes"`
 		Relationships struct {
 			Configurable struct {
 				Data struct {
@@ -91,8 +88,8 @@ type V2VarsResponse struct {
 	} `json:"data"`
 }
 
-// V2WorkspaceData is what is returned by the api for each workspace
-type V2WorkspaceData struct {
+// Workspace is what is returned by the api for each workspace
+type Workspace struct {
 	ID         string `json:"id"`
 	Type       string `json:"type"`
 	Attributes struct {
@@ -131,10 +128,10 @@ type V2WorkspaceData struct {
 			} `json:"data"`
 		} `json:"organization"`
 		LatestRun struct {
-			Data interface{} `json:"data"`
+			Data any `json:"data"`
 		} `json:"latest-run"`
 		CurrentRun struct {
-			Data interface{} `json:"data"`
+			Data any `json:"data"`
 		} `json:"current-run"`
 	} `json:"relationships"`
 	Links struct {
@@ -155,7 +152,7 @@ const (
 	WsAttrWorkingDirectory     = "working-directory"
 )
 
-func (v *V2WorkspaceData) AttributeByLabel(label string) (string, error) {
+func (v *Workspace) AttributeByLabel(label string) (string, error) {
 	switch strings.ToLower(label) {
 	case WsAttrID:
 		return v.ID, nil
@@ -184,14 +181,14 @@ func (v *V2WorkspaceData) AttributeByLabel(label string) (string, error) {
 	return "", fmt.Errorf("Attribute label not valid: %s", label)
 }
 
-// V2WorkspaceJSON is what is returned by the api when requesting the data for a workspace
-type V2WorkspaceJSON struct {
-	Data V2WorkspaceData `json:"data"`
+// WorkspaceJSON is what is returned by the api when requesting the data for a workspace
+type WorkspaceJSON struct {
+	Data Workspace `json:"data"`
 }
 
-// AllV2WorkspacesJSON is what is returned by the api when requesting the data for all workspaces
-type AllV2WorkspacesJSON struct {
-	Data []V2WorkspaceData `json:"data"`
+// WorkspaceList is returned by the API when requesting a list of workspaces
+type WorkspaceList struct {
+	Data []Workspace `json:"data"`
 }
 
 // TeamWorkspaceData is what is returned by the api for one team access object for a workspace
@@ -242,11 +239,8 @@ type TFVar struct {
 type WorkspaceUpdateParams struct {
 	Organization    string
 	WorkspaceFilter string
-	Token           string
 	Attribute       string
 	Value           string
-	DryRunMode      bool
-	Debug           bool
 }
 
 // ConvertHCLVariable changes a TFVar struct in place by escaping
@@ -260,9 +254,9 @@ func ConvertHCLVariable(tfVar *TFVar) {
 	tfVar.Value = strings.Replace(tfVar.Value, "\n", "\\n", -1)
 }
 
-// GetCreateV2VariablePayload returns the json needed to make a Post to the
-// v2 terraform vars api
-func GetCreateV2VariablePayload(organization, workspaceName string, tfVar TFVar) string {
+// GetCreateVariablePayload returns the json needed to make a Post to the
+// Terraform vars api
+func GetCreateVariablePayload(organization, workspaceName string, tfVar TFVar) string {
 	return fmt.Sprintf(`
 {
   "data": {
@@ -287,9 +281,9 @@ func GetCreateV2VariablePayload(organization, workspaceName string, tfVar TFVar)
 `, tfVar.Key, tfVar.Value, tfVar.Hcl, tfVar.Sensitive, organization, workspaceName)
 }
 
-// GetUpdateV2VariablePayload returns the json needed to make a Post to the
-// v2 terraform vars api
-func GetUpdateV2VariablePayload(organization, workspaceName, variableID string, tfVar TFVar) string {
+// GetUpdateVariablePayload returns the json needed to make a Post to the
+// Terraform vars api
+func GetUpdateVariablePayload(organization, workspaceName, variableID string, tfVar TFVar) string {
 	return fmt.Sprintf(`
 {
   "data": {
@@ -316,22 +310,18 @@ func GetUpdateV2VariablePayload(organization, workspaceName, variableID string, 
 `, variableID, tfVar.Key, tfVar.Value, tfVar.Hcl, tfVar.Sensitive, organization, workspaceName)
 }
 
-func GetV2AllWorkspaceData(organization, tfToken string) ([]V2WorkspaceData, error) {
+// GetAllWorkspaces retrieves all workspaces from Terraform Cloud and returns a list of Workspace objects
+func GetAllWorkspaces(organization string) ([]Workspace, error) {
 	u := NewTfcUrl(fmt.Sprintf("/organizations/%s/workspaces", organization))
 	u.SetParam(paramPageSize, strconv.Itoa(pageSize))
 
-	headers := map[string]string{
-		"Authorization": "Bearer " + tfToken,
-		"Content-Type":  "application/vnd.api+json",
-	}
-
-	allWsData := []V2WorkspaceData{}
+	allWsData := []Workspace{}
 
 	for page := 1; ; page++ {
 		u.SetParam(paramPageNumber, strconv.Itoa(page))
-		nextWsData, err := getWorkspacePage(u.String(), headers)
+		nextWsData, err := getWorkspacePage(u.String())
 		if err != nil {
-			return []V2WorkspaceData{}, fmt.Errorf("error getting workspace data for %s: %s", organization, err)
+			return []Workspace{}, fmt.Errorf("error getting workspace data for %s: %s", organization, err)
 		}
 		allWsData = append(allWsData, nextWsData.Data...)
 
@@ -343,71 +333,79 @@ func GetV2AllWorkspaceData(organization, tfToken string) ([]V2WorkspaceData, err
 	return allWsData, nil
 }
 
-func getWorkspacePage(url string, headers map[string]string) (AllV2WorkspacesJSON, error) {
-	resp := CallAPI(http.MethodGet, url, "", headers)
+func getWorkspacePage(url string) (WorkspaceList, error) {
+	resp := callAPI(http.MethodGet, url, "", nil)
 
 	defer resp.Body.Close()
 	// bodyBytes, _ := ioutil.ReadAll(resp.Body)
 	// fmt.Println(string(bodyBytes))
 
-	var nextWsData AllV2WorkspacesJSON
+	var nextWsData WorkspaceList
 
 	if err := json.NewDecoder(resp.Body).Decode(&nextWsData); err != nil {
-		return AllV2WorkspacesJSON{}, fmt.Errorf("json decode error: %s", err)
+		return WorkspaceList{}, fmt.Errorf("json decode error: %s", err)
 	}
 	return nextWsData, nil
 }
 
-func GetV2WorkspaceData(organization, workspaceName, tfToken string) (V2WorkspaceJSON, error) {
+func GetWorkspaceData(organization, workspaceName string) (WorkspaceJSON, error) {
 	u := NewTfcUrl(fmt.Sprintf(
 		"/organizations/%s/workspaces/%s",
 		organization,
 		workspaceName,
 	))
 
-	headers := map[string]string{
-		"Authorization": "Bearer " + tfToken,
-		"Content-Type":  "application/vnd.api+json",
-	}
-	resp := CallAPI(http.MethodGet, u.String(), "", headers)
+	resp := callAPI(http.MethodGet, u.String(), "", nil)
 
 	defer resp.Body.Close()
 	// bodyBytes, _ := ioutil.ReadAll(resp.Body)
 	// fmt.Println(string(bodyBytes))
 
-	var v2WsData V2WorkspaceJSON
+	var wsData WorkspaceJSON
 
-	if err := json.NewDecoder(resp.Body).Decode(&v2WsData); err != nil {
-		return V2WorkspaceJSON{}, fmt.Errorf("Error getting workspace data for %s:%s\n%s", organization, workspaceName, err.Error())
+	if err := json.NewDecoder(resp.Body).Decode(&wsData); err != nil {
+		return WorkspaceJSON{}, fmt.Errorf("Error getting workspace data for %s:%s\n%s", organization, workspaceName, err.Error())
 	}
 
-	return v2WsData, nil
+	return wsData, nil
 }
 
-// GetVarsFromV2 returns a list of Terraform variables for a given workspace
-func GetVarsFromV2(organization, workspaceName, tfToken string) ([]V2Var, error) {
+// GetWorkspaceVar retrieves the variables from a Workspace and returns the Var that matches the given key
+func GetWorkspaceVar(organization, wsName, key string) (*Var, error) {
+	vars, err := GetVarsFromWorkspace(organization, wsName)
+	if err != nil {
+		return nil, fmt.Errorf("Error getting variables for %s:%s\n%w", organization, wsName, err)
+	}
+
+	for _, v := range vars {
+		if v.Key == key {
+			found := v
+			return &found, nil
+		}
+	}
+	return nil, nil
+}
+
+// GetVarsFromWorkspace returns a list of Terraform variables for a given workspace
+func GetVarsFromWorkspace(organization, workspaceName string) ([]Var, error) {
 	u := NewTfcUrl("/vars")
 	u.SetParam(paramFilterOrganizationName, organization)
 	u.SetParam(paramFilterWorkspaceName, workspaceName)
 
-	headers := map[string]string{
-		"Authorization": "Bearer " + tfToken,
-		"Content-Type":  "application/vnd.api+json",
-	}
-	resp := CallAPI(http.MethodGet, u.String(), "", headers)
+	resp := callAPI(http.MethodGet, u.String(), "", nil)
 
 	defer resp.Body.Close()
 	// bodyBytes, _ := ioutil.ReadAll(resp.Body)
 	// fmt.Println(string(bodyBytes))
 
-	var v2Resp V2VarsResponse
+	var varsResp VarsResponse
 
-	if err := json.NewDecoder(resp.Body).Decode(&v2Resp); err != nil {
-		return []V2Var{}, fmt.Errorf("Error getting variables for %s:%s ...\n%s", organization, workspaceName, err.Error())
+	if err := json.NewDecoder(resp.Body).Decode(&varsResp); err != nil {
+		return []Var{}, fmt.Errorf("Error getting variables for %s:%s ...\n%s", organization, workspaceName, err.Error())
 	}
 
-	variables := []V2Var{}
-	for _, data := range v2Resp.Data {
+	variables := []Var{}
+	for _, data := range varsResp.Data {
 		data.Variable.ID = data.ID // push the ID down into the Variable for future reference
 		variables = append(variables, data.Variable)
 	}
@@ -415,13 +413,23 @@ func GetVarsFromV2(organization, workspaceName, tfToken string) ([]V2Var, error)
 	return variables, nil
 }
 
-func GetAllWorkSpacesVarsFromV2(wsData []V2WorkspaceData, organization, keyContains, valueContains, tfToken string) (map[string][]V2Var, error) {
-	allVars := map[string][]V2Var{}
+// DeleteVariable deletes a variable from a workspace
+func DeleteVariable(variableID string) {
+	u := NewTfcUrl("/vars/" + variableID)
+
+	resp := callAPI(http.MethodDelete, u.String(), "", nil)
+	_ = resp.Body.Close()
+}
+
+// SearchVarsInAllWorkspaces returns all the variables that match the search terms 'keyContains' and 'valueContains'
+// in all workspaces given. The return value is a map of variable lists with the workspace name as the key.
+func SearchVarsInAllWorkspaces(wsData []Workspace, organization, keyContains, valueContains string) (map[string][]Var, error) {
+	allVars := map[string][]Var{}
 
 	for _, ws := range wsData {
 		wsName := ws.Attributes.Name
 
-		wsVars, err := GetMatchingVarsFromV2(organization, wsName, tfToken, keyContains, valueContains)
+		wsVars, err := SearchVariables(organization, wsName, keyContains, valueContains)
 		if err != nil {
 			return nil, err
 		}
@@ -431,14 +439,16 @@ func GetAllWorkSpacesVarsFromV2(wsData []V2WorkspaceData, organization, keyConta
 	return allVars, nil
 }
 
-func GetMatchingVarsFromV2(organization string, wsName string, tfToken string, keyContains string, valueContains string) ([]V2Var, error) {
-	vars, err := GetVarsFromV2(organization, wsName, tfToken)
+// SearchVariables returns a list of variables in the given workspace that match the search terms
+// 'keyContains' and 'valueContains'
+func SearchVariables(organization, wsName, keyContains, valueContains string) ([]Var, error) {
+	vars, err := GetVarsFromWorkspace(organization, wsName)
 	if err != nil {
 		err := fmt.Errorf("Error getting variables for %s:%s\n%s", organization, wsName, err.Error())
-		return []V2Var{}, err
+		return []Var{}, err
 	}
 
-	var wsVars []V2Var
+	var wsVars []Var
 
 	for _, v := range vars {
 		if keyContains != "" && strings.Contains(v.Key, keyContains) {
@@ -453,17 +463,12 @@ func GetMatchingVarsFromV2(organization string, wsName string, tfToken string, k
 	return wsVars, nil
 }
 
-// GetTeamAccessFromV2 returns the team access data from an existing workspace
-func GetTeamAccessFromV2(workspaceID, tfToken string) (AllTeamWorkspaceData, error) {
+// GetTeamAccessFrom returns the team access data from an existing workspace
+func GetTeamAccessFrom(workspaceID string) (AllTeamWorkspaceData, error) {
 	u := NewTfcUrl(fmt.Sprintf("/team-workspaces"))
 	u.SetParam(paramFilterWorkspaceID, workspaceID)
 
-	headers := map[string]string{
-		"Authorization": "Bearer " + tfToken,
-		"Content-Type":  "application/vnd.api+json",
-	}
-
-	resp := CallAPI(http.MethodGet, u.String(), "", headers)
+	resp := callAPI(http.MethodGet, u.String(), "", nil)
 
 	defer resp.Body.Close()
 
@@ -503,14 +508,9 @@ func getAssignTeamAccessPayload(accessLevel, workspaceID, teamID string) string 
 `, accessLevel, workspaceID, teamID)
 }
 
-// AssignTeamAccessOnV2 assigns the requested team access to a workspace on Terraform Enterprise V.2
-func AssignTeamAccessOnV2(workspaceID, tfToken string, allTeamData AllTeamWorkspaceData) {
-	url := fmt.Sprintf(baseURLv2 + "/team-workspaces")
-
-	headers := map[string]string{
-		"Authorization": "Bearer " + tfToken,
-		"Content-Type":  "application/vnd.api+json",
-	}
+// AssignTeamAccess assigns the requested team access to a workspace on Terraform Cloud
+func AssignTeamAccess(workspaceID string, allTeamData AllTeamWorkspaceData) {
+	url := fmt.Sprintf(baseURL + "/team-workspaces")
 
 	for _, teamData := range allTeamData.Data {
 		postData := getAssignTeamAccessPayload(
@@ -519,26 +519,22 @@ func AssignTeamAccessOnV2(workspaceID, tfToken string, allTeamData AllTeamWorksp
 			teamData.Relationships.Team.Data.ID,
 		)
 
-		resp := CallAPI("POST", url, postData, headers)
+		resp := callAPI("POST", url, postData, nil)
 		defer resp.Body.Close()
 	}
 	return
 }
 
-// CreateV2Variable makes a v2 terraform vars api post to create a variable
-// for a given organization and v2 workspace
-func CreateV2Variable(organization, workspaceName, tfToken string, tfVar TFVar) {
-	url := baseURLv2 + "/vars"
+// CreateVariable makes a Terraform vars API POST to create a variable
+// for a given organization and workspace
+func CreateVariable(organization, workspaceName string, tfVar TFVar) {
+	url := baseURL + "/vars"
 
 	ConvertHCLVariable(&tfVar)
 
-	postData := GetCreateV2VariablePayload(organization, workspaceName, tfVar)
+	postData := GetCreateVariablePayload(organization, workspaceName, tfVar)
 
-	headers := map[string]string{
-		"Authorization": "Bearer " + tfToken,
-		"Content-Type":  "application/vnd.api+json",
-	}
-	resp := CallAPI("POST", url, postData, headers)
+	resp := callAPI("POST", url, postData, nil)
 
 	defer resp.Body.Close()
 	// bodyBytes, _ := ioutil.ReadAll(resp.Body)
@@ -546,17 +542,17 @@ func CreateV2Variable(organization, workspaceName, tfToken string, tfVar TFVar) 
 	return
 }
 
-// CreateAllV2Variables makes several v2 terraform vars api posts to create
-// variables for a given organization and v2 workspace
-func CreateAllV2Variables(organization, workspaceName, tfToken string, tfVars []TFVar) {
+// CreateAllVariables makes several Terraform vars API POSTs to create
+// variables for a given organization and workspace
+func CreateAllVariables(organization, workspaceName string, tfVars []TFVar) {
 	for _, nextVar := range tfVars {
-		CreateV2Variable(organization, workspaceName, tfToken, nextVar)
+		CreateVariable(organization, workspaceName, nextVar)
 	}
 }
 
-// GetCreateV2WorkspacePayload returns the json needed to make a Post to the
-// v2 terraform workspaces api
-func GetCreateV2WorkspacePayload(oc OpsConfig, vcsTokenID string) string {
+// GetCreateWorkspacePayload returns the JSON needed to make a POST to the
+// Terraform workspaces API
+func GetCreateWorkspacePayload(oc OpsConfig, vcsTokenID string) string {
 	return fmt.Sprintf(`
 {
   "data": {
@@ -578,20 +574,16 @@ func GetCreateV2WorkspacePayload(oc OpsConfig, vcsTokenID string) string {
   `, oc.NewName, oc.TerraformVersion, oc.Directory, oc.RepoID, vcsTokenID, oc.Branch)
 }
 
-// UpdateV2Variable makes a v2 terraform vars api post to update a variable
-// for a given organization and v2 workspace
-func UpdateV2Variable(organization, workspaceName, variableID, tfToken string, tfVar TFVar) {
-	url := fmt.Sprintf(baseURLv2+"/vars/%s", variableID)
+// UpdateVariable makes a Terraform vars API call to update a variable
+// for a given organization and workspace
+func UpdateVariable(organization, workspaceName, variableID string, tfVar TFVar) {
+	url := fmt.Sprintf(baseURL+"/vars/%s", variableID)
 
 	ConvertHCLVariable(&tfVar)
 
-	patchData := GetUpdateV2VariablePayload(organization, workspaceName, variableID, tfVar)
+	patchData := GetUpdateVariablePayload(organization, workspaceName, variableID, tfVar)
 
-	headers := map[string]string{
-		"Authorization": "Bearer " + tfToken,
-		"Content-Type":  "application/vnd.api+json",
-	}
-	resp := CallAPI("PATCH", url, patchData, headers)
+	resp := callAPI("PATCH", url, patchData, nil)
 
 	defer resp.Body.Close()
 	// bodyBytes, _ := ioutil.ReadAll(resp.Body)
@@ -599,35 +591,28 @@ func UpdateV2Variable(organization, workspaceName, variableID, tfToken string, t
 	return
 }
 
-// CreateV2Workspace makes a v2 terraform workspaces api Post to create a
-// workspace for a given organization, including setting up its vcs repo integration
-func CreateV2Workspace(
-	oc OpsConfig,
-	tfToken, vcsTokenID string,
-) (string, error) {
+// CreateWorkspace makes a Terraform workspaces API call to create a
+// workspace for a given organization, including setting up its VCS repo integration
+func CreateWorkspace(oc OpsConfig, vcsTokenID string) (string, error) {
 	url := fmt.Sprintf(
-		baseURLv2+"/organizations/%s/workspaces",
+		baseURL+"/organizations/%s/workspaces",
 		oc.NewOrg,
 	)
 
-	postData := GetCreateV2WorkspacePayload(oc, vcsTokenID)
+	postData := GetCreateWorkspacePayload(oc, vcsTokenID)
 
-	headers := map[string]string{
-		"Authorization": "Bearer " + tfToken,
-		"Content-Type":  "application/vnd.api+json",
-	}
-	resp := CallAPI("POST", url, postData, headers)
+	resp := callAPI("POST", url, postData, nil)
 
 	defer resp.Body.Close()
 	// bodyBytes, _ := ioutil.ReadAll(resp.Body)
 	// fmt.Println(string(bodyBytes))
 
-	var v2WsData V2WorkspaceJSON
+	var wsData WorkspaceJSON
 
-	if err := json.NewDecoder(resp.Body).Decode(&v2WsData); err != nil {
+	if err := json.NewDecoder(resp.Body).Decode(&wsData); err != nil {
 		return "", fmt.Errorf("error getting created workspace data: %s\n", err)
 	}
-	return v2WsData.Data.ID, nil
+	return wsData.Data.ID, nil
 }
 
 // RunTFInit ...
@@ -710,35 +695,35 @@ func RunTFInit(oc OpsConfig, tfToken, tfTokenDestination string) error {
 	return nil
 }
 
-// CloneV2Workspace gets the data, variables and team access data for an existing Terraform Enterprise workspace
+// CloneWorkspace gets the data, variables and team access data for an existing Terraform Cloud workspace
 //  and then creates a clone of it with the same data.
 // If the copyVariables param is set to true, then all the non-sensitive variable values will be added to the new
 //   workspace.  Otherwise, they will be set to "REPLACE_THIS_VALUE"
-func CloneV2Workspace(cfg V2CloneConfig) ([]string, error) {
-	v2WsData, err := GetV2WorkspaceData(cfg.Organization, cfg.SourceWorkspace, cfg.AtlasToken)
+func CloneWorkspace(cfg CloneConfig) ([]string, error) {
+	wsData, err := GetWorkspaceData(cfg.Organization, cfg.SourceWorkspace)
 	if err != nil {
 		return []string{}, err
 	}
 
-	variables, err := GetVarsFromV2(cfg.Organization, cfg.SourceWorkspace, cfg.AtlasToken)
+	variables, err := GetVarsFromWorkspace(cfg.Organization, cfg.SourceWorkspace)
 	if err != nil {
 		return []string{}, err
 	}
 
 	if !cfg.DifferentDestinationAccount {
 		cfg.NewOrganization = cfg.Organization
-		cfg.NewVCSTokenID = v2WsData.Data.Attributes.VCSRepo.Identifier
+		cfg.NewVCSTokenID = wsData.Data.Attributes.VCSRepo.Identifier
 	}
 
 	oc := OpsConfig{
 		SourceOrg:        cfg.Organization,
-		SourceName:       v2WsData.Data.Attributes.Name,
+		SourceName:       wsData.Data.Attributes.Name,
 		NewOrg:           cfg.NewOrganization,
 		NewName:          cfg.NewWorkspace,
-		TerraformVersion: v2WsData.Data.Attributes.TerraformVersion,
-		RepoID:           v2WsData.Data.Attributes.VCSRepo.Identifier,
-		Branch:           v2WsData.Data.Attributes.VCSRepo.Branch,
-		Directory:        v2WsData.Data.Attributes.WorkingDirectory,
+		TerraformVersion: wsData.Data.Attributes.TerraformVersion,
+		RepoID:           wsData.Data.Attributes.VCSRepo.Identifier,
+		Branch:           wsData.Data.Attributes.VCSRepo.Branch,
+		Directory:        wsData.Data.Attributes.WorkingDirectory,
 	}
 
 	sensitiveVars := []string{}
@@ -768,9 +753,16 @@ func CloneV2Workspace(cfg V2CloneConfig) ([]string, error) {
 		tfVars = append(tfVars, tfVar)
 	}
 
+	if config.readOnly {
+		return sensitiveVars, nil
+	}
+
 	if cfg.DifferentDestinationAccount {
-		CreateV2Workspace(oc, cfg.AtlasTokenDestination, cfg.NewVCSTokenID)
-		CreateAllV2Variables(oc.NewOrg, oc.NewName, cfg.AtlasTokenDestination, tfVars)
+		config.token = cfg.AtlasTokenDestination
+		if _, err := CreateWorkspace(oc, cfg.NewVCSTokenID); err != nil {
+			return nil, err
+		}
+		CreateAllVariables(oc.NewOrg, oc.NewName, tfVars)
 
 		if cfg.CopyState {
 			if err := RunTFInit(oc, cfg.AtlasToken, cfg.AtlasTokenDestination); err != nil {
@@ -781,31 +773,31 @@ func CloneV2Workspace(cfg V2CloneConfig) ([]string, error) {
 		return sensitiveVars, nil
 	}
 
-	CreateV2Workspace(oc, cfg.AtlasToken, v2WsData.Data.Attributes.VCSRepo.TokenID)
-	CreateAllV2Variables(oc.NewOrg, oc.NewName, cfg.AtlasToken, tfVars)
+	_, err = CreateWorkspace(oc, wsData.Data.Attributes.VCSRepo.TokenID)
+	CreateAllVariables(oc.NewOrg, oc.NewName, tfVars)
 
 	// Get Team Access Data for source Workspace
-	allTeamData, err := GetTeamAccessFromV2(v2WsData.Data.ID, cfg.AtlasToken)
+	allTeamData, err := GetTeamAccessFrom(wsData.Data.ID)
 	if err != nil {
 		return sensitiveVars, err
 	}
 
 	// Get new Workspace data for its ID
-	newV2WsData, err := GetV2WorkspaceData(cfg.Organization, cfg.NewWorkspace, cfg.AtlasToken)
+	newWsData, err := GetWorkspaceData(cfg.Organization, cfg.NewWorkspace)
 	if err != nil {
 		return sensitiveVars, err
 	}
 
-	AssignTeamAccessOnV2(newV2WsData.Data.ID, cfg.AtlasToken, allTeamData)
+	AssignTeamAccess(newWsData.Data.ID, allTeamData)
 
 	return sensitiveVars, nil
 }
 
-// AddOrUpdateV2Variable adds or updates an existing Terraform Enterprise workspace variable
+// AddOrUpdateVariable adds or updates an existing Terraform Cloud workspace variable
 // If the copyVariables param is set to true, then all the non-sensitive variable values will be added to the new
 //   workspace.  Otherwise, they will be set to "REPLACE_THIS_VALUE"
-func AddOrUpdateV2Variable(cfg V2UpdateConfig) (string, error) {
-	variables, err := GetVarsFromV2(cfg.Organization, cfg.Workspace, cfg.AtlasToken)
+func AddOrUpdateVariable(cfg UpdateConfig) (string, error) {
+	variables, err := GetVarsFromWorkspace(cfg.Organization, cfg.Workspace)
 	if err != nil {
 		return "", err
 	}
@@ -820,8 +812,8 @@ func AddOrUpdateV2Variable(cfg V2UpdateConfig) (string, error) {
 			}
 			// Found a match
 			tfVar := TFVar{Key: nextVar.Key, Value: cfg.NewValue, Hcl: false, Sensitive: cfg.SensitiveVariable}
-			if !cfg.DryRunMode {
-				UpdateV2Variable(cfg.Organization, cfg.Workspace, nextVar.ID, cfg.AtlasToken, tfVar)
+			if !config.readOnly {
+				UpdateVariable(cfg.Organization, cfg.Workspace, nextVar.ID, tfVar)
 			}
 			return fmt.Sprintf("Replaced the value of %s from %s to %s", nextVar.Key, oldValue, cfg.NewValue), nil
 		}
@@ -839,8 +831,8 @@ func AddOrUpdateV2Variable(cfg V2UpdateConfig) (string, error) {
 
 		tfVar := TFVar{Key: nextVar.Key, Value: cfg.NewValue, Hcl: false, Sensitive: cfg.SensitiveVariable}
 
-		if !cfg.DryRunMode {
-			UpdateV2Variable(cfg.Organization, cfg.Workspace, nextVar.ID, cfg.AtlasToken, tfVar)
+		if !config.readOnly {
+			UpdateVariable(cfg.Organization, cfg.Workspace, nextVar.ID, tfVar)
 		}
 		return fmt.Sprintf("Replaced the value of %s from %s to %s", nextVar.Key, oldValue, cfg.NewValue), nil
 	}
@@ -849,8 +841,8 @@ func AddOrUpdateV2Variable(cfg V2UpdateConfig) (string, error) {
 	if cfg.AddKeyIfNotFound {
 		tfVar := TFVar{Key: cfg.SearchString, Value: cfg.NewValue, Hcl: false, Sensitive: cfg.SensitiveVariable}
 
-		if !cfg.DryRunMode {
-			CreateV2Variable(cfg.Organization, cfg.Workspace, cfg.AtlasToken, tfVar)
+		if !config.readOnly {
+			CreateVariable(cfg.Organization, cfg.Workspace, tfVar)
 		}
 		return fmt.Sprintf("Added variable %s = %s", cfg.SearchString, cfg.NewValue), nil
 	}
@@ -884,10 +876,9 @@ type OAuthTokens struct {
 	} `json:"data"`
 }
 
-func getVCSToken(vcsUsername, orgName, tfToken string) (string, error) {
-	url := fmt.Sprintf(baseURLv2+"/organizations/%s/oauth-tokens", orgName)
-	headers := map[string]string{"Authorization": "Bearer " + tfToken}
-	resp := CallAPI(http.MethodGet, url, "", headers)
+func getVCSToken(vcsUsername, orgName string) (string, error) {
+	url := fmt.Sprintf(baseURL+"/organizations/%s/oauth-tokens", orgName)
+	resp := callAPI(http.MethodGet, url, "", nil)
 
 	defer resp.Body.Close()
 	// bodyBytes, _ := ioutil.ReadAll(resp.Body)
@@ -912,23 +903,17 @@ func getVCSToken(vcsUsername, orgName, tfToken string) (string, error) {
 }
 
 // UpdateWorkspace updates one attribute of one or more Terraform Cloud workspaces.
-func UpdateWorkspace(params WorkspaceUpdateParams) {
+func UpdateWorkspace(params WorkspaceUpdateParams) error {
 	if err := validateUpdateWorkspaceParams(params); err != nil {
-		fmt.Println(err.Error())
-		return
+		return err
 	}
 
-	foundWs, err := FindWorkspaces(params.Organization, params.Token, params.WorkspaceFilter)
-	if err != nil {
-		fmt.Printf("error listing workspaces: %s\n", err)
-		return
-	}
+	foundWs := FindWorkspaces(params.Organization, params.WorkspaceFilter)
 	if len(foundWs) == 0 {
-		fmt.Printf("no workspaces found matching the filter '%s'\n", params.WorkspaceFilter)
-		return
+		return fmt.Errorf("no workspaces found matching the filter '%s'\n", params.WorkspaceFilter)
 	}
 
-	if params.DryRunMode {
+	if config.readOnly {
 		w := tabwriter.NewWriter(os.Stdout, 0, 0, 1, ' ', 0)
 		_, _ = fmt.Fprintln(w, "organization:\t", params.Organization)
 		_, _ = fmt.Fprintln(w, "workspace filter:\t", params.WorkspaceFilter)
@@ -942,43 +927,38 @@ func UpdateWorkspace(params WorkspaceUpdateParams) {
 		fmt.Printf("Found %d workspace(s)\n", len(foundWs))
 	}
 
-	headers := map[string]string{
-		"Authorization": "Bearer " + params.Token,
-		"Content-Type":  "application/vnd.api+json",
-	}
-	jsonObj := gabs.Wrap(map[string]interface{}{
-		"data": map[string]interface{}{
+	jsonObj := gabs.Wrap(map[string]any{
+		"data": map[string]any{
 			"type": "workspace",
 		},
 	})
-	_, err = jsonObj.SetP(parseVal(params.Value), "data.attributes."+params.Attribute)
-	if err != nil {
-		fmt.Println("unable to process attribute for update: ", err.Error())
-		return
+	if _, err := jsonObj.SetP(parseVal(params.Value), "data.attributes."+params.Attribute); err != nil {
+		return fmt.Errorf("unable to process attribute for update: %s", err)
 	}
 	postData := jsonObj.String()
 
-	if params.Debug {
+	if config.debug {
 		fmt.Printf("request body:\n    %s\n", postData)
 	}
-	if params.DryRunMode {
-		return
+	if config.readOnly {
+		return nil
 	}
 	for id, name := range foundWs {
-		url := fmt.Sprintf(baseURLv2+"/workspaces/%s", id)
-		resp := CallAPI("PATCH", url, postData, headers)
+		url := fmt.Sprintf(baseURL+"/workspaces/%s", id)
+		resp := callAPI("PATCH", url, postData, nil)
 		bodyBytes, _ := ioutil.ReadAll(resp.Body)
 		_ = resp.Body.Close()
 
 		fmt.Printf("set '%s' to '%s' on workspace %s\n", params.Attribute, params.Value, name)
-		if params.Debug {
+		if config.debug {
 			fmt.Printf("response:\n    %s\n", bodyBytes)
 		}
 	}
 	fmt.Printf("Updated %d workspace(s)\n", len(foundWs))
+	return nil
 }
 
-func parseVal(value string) interface{} {
+func parseVal(value string) any {
 	if value == "null" {
 		return nil
 	}
@@ -992,7 +972,7 @@ func parseVal(value string) interface{} {
 }
 
 func validateUpdateWorkspaceParams(params WorkspaceUpdateParams) error {
-	if params.Debug {
+	if config.debug {
 		fmt.Printf("params:\n    %#v\n", params)
 	}
 
@@ -1006,20 +986,15 @@ func validateUpdateWorkspaceParams(params WorkspaceUpdateParams) error {
 // FindWorkspaces uses the `search[name]` parameter to retrieve a list of workspaces in Terraform Cloud that
 // match the workspaceFilter by the workspace name. The list is returned as a map with the ID in the key
 // and the name in the value.
-func FindWorkspaces(organization, token, workspaceFilter string) (map[string]string, error) {
+func FindWorkspaces(organization, workspaceFilter string) map[string]string {
 	u := NewTfcUrl(fmt.Sprintf("/organizations/%s/workspaces", organization))
 	u.SetParam(paramPageSize, strconv.Itoa(pageSize))
 	u.SetParam(paramSearchName, workspaceFilter)
 
-	headers := map[string]string{
-		"Authorization": "Bearer " + token,
-		"Content-Type":  "application/vnd.api+json",
-	}
-
 	var attributeData [][]string
 	for page := 1; ; page++ {
 		u.SetParam(paramPageNumber, strconv.Itoa(page))
-		resp := CallAPI(http.MethodGet, u.String(), "", headers)
+		resp := callAPI(http.MethodGet, u.String(), "", nil)
 		ws := parseWorkspacePage(resp, []string{"id", "name"})
 		attributeData = append(attributeData, ws...)
 		if len(ws) < pageSize {
@@ -1031,23 +1006,19 @@ func FindWorkspaces(organization, token, workspaceFilter string) (map[string]str
 	for _, ws := range attributeData {
 		foundWs[ws[0]] = ws[1]
 	}
-	return foundWs, nil
+	return foundWs
 }
 
 // GetWorkspaceAttributes returns a list of all workspaces in `organization` and the values of the attributes requested
 // in the `attributes` list. The value of unrecognized attribute names will be returned as `null`.
-func GetWorkspaceAttributes(organization, tfToken string, attributes []string) ([][]string, error) {
+func GetWorkspaceAttributes(organization string, attributes []string) ([][]string, error) {
 	u := NewTfcUrl(fmt.Sprintf("/organizations/%s/workspaces", organization))
 	u.SetParam(paramPageSize, strconv.Itoa(pageSize))
 
-	headers := map[string]string{
-		"Authorization": "Bearer " + tfToken,
-		"Content-Type":  "application/vnd.api+json",
-	}
 	var attributeData [][]string
 	for page := 1; ; page++ {
 		u.SetParam(paramPageNumber, strconv.Itoa(page))
-		resp := CallAPI(http.MethodGet, u.String(), "", headers)
+		resp := callAPI(http.MethodGet, u.String(), "", nil)
 		ws := parseWorkspacePage(resp, attributes)
 		attributeData = append(attributeData, ws...)
 		if len(ws) < pageSize {
@@ -1074,7 +1045,7 @@ func parseWorkspacePage(resp *http.Response, attributes []string) [][]string {
 	for i, ws := range wsAttributes {
 		attributeData[i] = make([]string, len(attributes))
 		for j, a := range attributes {
-			var v interface{}
+			var v any
 			if a == "id" {
 				v = parsed.Path(fmt.Sprintf("data.%d.id", i)).Data()
 			} else {
@@ -1084,4 +1055,117 @@ func parseWorkspacePage(resp *http.Response, attributes []string) [][]string {
 		}
 	}
 	return attributeData
+}
+
+func GetWorkspaceByName(organizationName, workspaceName string) (Workspace, error) {
+	u := NewTfcUrl(fmt.Sprintf("/organizations/%s/workspaces/%s", organizationName, workspaceName))
+
+	resp := callAPI(http.MethodGet, u.String(), "", nil)
+
+	var ws WorkspaceJSON
+	if err := json.NewDecoder(resp.Body).Decode(&ws); err != nil {
+		return Workspace{}, fmt.Errorf("json decode error: %s", err)
+	}
+
+	return ws.Data, nil
+}
+
+type VariableSet struct {
+	ID         string `json:"id"`
+	Type       string `json:"type"`
+	Attributes struct {
+		Name           string    `json:"name"`
+		Description    string    `json:"description"`
+		Global         bool      `json:"global"`
+		UpdatedAt      time.Time `json:"updated-at"`
+		VarCount       int       `json:"var-count"`
+		WorkspaceCount int       `json:"workspace-count"`
+	} `json:"attributes"`
+	Relationships struct {
+		Organization struct {
+			Data struct {
+				ID   string `json:"id"`
+				Type string `json:"type"`
+			} `json:"data"`
+		} `json:"organization"`
+		Vars struct {
+			Data []struct {
+				ID   string `json:"id"`
+				Type string `json:"type"`
+			} `json:"data"`
+		} `json:"vars"`
+		Workspaces struct {
+			Data []struct {
+				ID   string `json:"id"`
+				Type string `json:"type"`
+			} `json:"data"`
+		} `json:"workspaces"`
+	} `json:"relationships"`
+}
+
+func GetVariableSet(org, vsName string) (*VariableSet, error) {
+	list, err := GetAllVariableSets(org)
+	if err != nil {
+		return nil, fmt.Errorf("error getting list of variable sets in org: %w", err)
+	}
+	for _, l := range list.Data {
+		if l.Attributes.Name == vsName {
+			found := l
+			return &found, nil
+		}
+	}
+	return nil, nil
+}
+
+type VariableSetList struct {
+	Data  []VariableSet `json:"data"`
+	Links struct {
+		Self  string `json:"self"`
+		First string `json:"first"`
+		Prev  any    `json:"prev"`
+		Next  any    `json:"next"`
+		Last  string `json:"last"`
+	} `json:"links"`
+}
+
+func GetAllVariableSets(organizationName string) (VariableSetList, error) {
+	u := NewTfcUrl(fmt.Sprintf("/organizations/%s/varsets", organizationName))
+
+	resp := callAPI(http.MethodGet, u.String(), "", nil)
+
+	var variableSetList VariableSetList
+	if err := json.NewDecoder(resp.Body).Decode(&variableSetList); err != nil {
+		return variableSetList, fmt.Errorf("unexpected content retrieving variable set list: %w", err)
+	}
+
+	return variableSetList, nil
+}
+
+// TODO: make a config struct for this call?
+func ApplyVariableSet(varsetID string, workspaceIDs []string) error {
+	u := NewTfcUrl(fmt.Sprintf("/varsets/%s/relationships/workspaces", varsetID))
+	data := gabs.New()
+	_, err := data.ArrayOfSize(len(workspaceIDs), "data")
+	if err != nil {
+		return fmt.Errorf("ArrayOfSize failed in ApplyVariableSet: %w", err)
+	}
+	for i, id := range workspaceIDs {
+		if _, err := data.S("data").SetIndex(map[string]any{
+			"type": "workspace",
+			"id":   id,
+		}, i); err != nil {
+			return fmt.Errorf("SetIndex failed in ApplyVariableSet: %w", err)
+		}
+	}
+	postData := data.String()
+
+	if config.debug {
+		fmt.Printf("request body:\n    %s\n", postData)
+	}
+	if config.readOnly {
+		return nil
+	}
+	_ = callAPI(http.MethodPost, u.String(), postData, nil)
+	// TODO: need to look at response?
+	return nil
 }

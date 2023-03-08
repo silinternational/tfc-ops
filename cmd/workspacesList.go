@@ -1,4 +1,4 @@
-// Copyright © 2018-2021 SIL International
+// Copyright © 2018-2022 SIL International
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -47,7 +47,7 @@ func init() {
 
 func runList() {
 	allAttrs := strings.Split(attributes, ",")
-	allData, err := lib.GetWorkspaceAttributes(organization, atlasToken, allAttrs)
+	allData, err := lib.GetWorkspaceAttributes(organization, allAttrs)
 	if err != nil {
 		fmt.Println(err.Error())
 		return

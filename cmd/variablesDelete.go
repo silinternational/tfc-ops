@@ -48,23 +48,13 @@ func runVariablesDelete() {
 		fmt.Println("Read only mode enabled. No variables will be deleted.")
 	}
 
-	if workspace != "" {
-		found := deleteWorkspaceVar(organization, workspace, key)
-		if !found {
-			errLog.Fatalf("Variable %s not found in workspace %s\n", key, workspace)
-		}
-		return
+	if workspace == "" {
+		errLog.Fatal("No workspace specified")
 	}
 
-	fmt.Printf("Deleting variables with key '%s' from all workspaces...\n", key)
-	allWorkspaces, err := lib.GetAllWorkspaces(organization)
-	if err != nil {
-		println(err.Error())
-		return
-	}
-
-	for _, w := range allWorkspaces {
-		deleteWorkspaceVar(organization, w.Attributes.Name, key)
+	found := deleteWorkspaceVar(organization, workspace, key)
+	if !found {
+		errLog.Fatalf("Variable %s not found in workspace %s\n", key, workspace)
 	}
 	return
 }

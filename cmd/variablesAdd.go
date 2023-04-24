@@ -69,13 +69,11 @@ func runVariablesAdd() {
 	return
 }
 
-func addWorkspaceVar(org, ws, key, value string) bool {
+func addWorkspaceVar(org, ws, key, value string) {
 	if v, err := lib.GetWorkspaceVar(org, ws, key); err != nil {
-		println(err)
-		return false
+		errLog.Fatalf("failure checking for existence of variable '%s' in workspace '%s', %s\n", key, ws, err)
 	} else if v != nil {
-		fmt.Printf("'%s' already exists in '%s'. Use 'variable update' command to change the value.", key, value)
-		return false
+		errLog.Fatalf("'%s' already exists in '%s'. Use 'variable update' command to change the value.\n", key, ws)
 	}
 
 	fmt.Printf("Workspace %s: Adding variable %s = %s\n", ws, key, value)
@@ -89,8 +87,8 @@ func addWorkspaceVar(org, ws, key, value string) bool {
 			SearchOnVariableValue: false,
 			SensitiveVariable:     false,
 		}); err != nil {
-			return false
+			errLog.Fatalf("failed to add variable '%s' in workspace '%s', %s\n", key, ws, err)
 		}
 	}
-	return true
+	return
 }

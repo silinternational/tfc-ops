@@ -26,6 +26,7 @@ import (
 var (
 	copyState                   bool
 	copyVariables               bool
+	applyVariableSets           bool
 	differentDestinationAccount bool
 	newOrganization             string
 	sourceWorkspace             string
@@ -60,6 +61,7 @@ var cloneCmd = &cobra.Command{
 			NewVCSTokenID:               newVCSTokenID,
 			CopyState:                   copyState,
 			CopyVariables:               copyVariables,
+			ApplyVariableSets:           applyVariableSets,
 			DifferentDestinationAccount: differentDestinationAccount,
 		}
 
@@ -111,6 +113,12 @@ func init() {
 		false,
 		`optional (e.g. "-c=true") whether to copy the values of the Source Workspace variables.`,
 	)
+	cloneCmd.Flags().BoolVar(
+		&applyVariableSets,
+		"applyVariableSets",
+		false,
+		`optional, whether to apply the same variable sets to the new workspace (only for same-account clone).`,
+	)
 	cloneCmd.Flags().BoolVarP(
 		&differentDestinationAccount,
 		"differentDestinationAccount",
@@ -137,8 +145,10 @@ func runClone(cfg cloner.CloneConfig) {
 		fmt.Print("Info: ATLAS_TOKEN_DESTINATION is not set, using ATLAS_TOKEN for destination account.\n\n")
 	}
 
-	fmt.Printf("clone called using %s, %s, %s, copyState: %t, copyVariables: %t, differentDestinationAccount: %t\n",
-		cfg.Organization, cfg.SourceWorkspace, cfg.NewWorkspace, cfg.CopyState, cfg.CopyVariables, cfg.DifferentDestinationAccount)
+	fmt.Printf("clone called using %s, %s, %s, copyState: %t, copyVariables: %t, "+
+		"applyVariableSets: %t, differentDestinationAccount: %t\n",
+		cfg.Organization, cfg.SourceWorkspace, cfg.NewWorkspace, cfg.CopyState, cfg.CopyVariables,
+		cfg.ApplyVariableSets, cfg.DifferentDestinationAccount)
 
 	sensitiveVars, err := cloner.CloneWorkspace(cfg)
 	if err != nil {

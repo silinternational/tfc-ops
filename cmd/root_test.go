@@ -1,7 +1,6 @@
 package cmd
 
 import (
-	"reflect"
 	"testing"
 )
 
@@ -33,12 +32,11 @@ func Test_stringMapToSlice(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got, got1 := stringMapToSlice(tt.input)
-			if !reflect.DeepEqual(got, tt.wantKeys) {
-				t.Errorf("stringMapToSlice() got = %v, want %v", got, tt.wantKeys)
-			}
-			if !reflect.DeepEqual(got1, tt.wantValues) {
-				t.Errorf("stringMapToSlice() got1 = %v, want %v", got1, tt.wantValues)
+			keys, values := stringMapToSlice(tt.input)
+			for i := range keys {
+				if tt.input[keys[i]] != values[i] {
+					t.Errorf("stringMapToSlice() got = %v, want %v", values[i], tt.input[keys[i]])
+				}
 			}
 		})
 	}

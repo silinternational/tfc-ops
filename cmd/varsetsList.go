@@ -51,7 +51,7 @@ func runVarsetsList() {
 	if workspace != "" {
 		w, err := lib.GetWorkspaceByName(organization, workspace)
 		if err != nil {
-			errLog.Fatalf("error getting workspace from Terraform: %s", err)
+			errLog.Fatalf("error getting workspace %q from Terraform: %s", workspace, err)
 		}
 		workspaces = map[string]string{w.ID: workspace}
 	} else {
@@ -66,7 +66,7 @@ func runVarsetsList() {
 		if err != nil {
 			return
 		}
-		fmt.Printf("Variable sets applied to workspace %s:\n", name)
+		fmt.Printf("Workspace %s has the following variable sets:\n", name)
 		for _, set := range sets.Data {
 			fmt.Printf("  %s\n", set.Attributes.Name)
 		}

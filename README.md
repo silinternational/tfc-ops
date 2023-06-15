@@ -121,6 +121,24 @@ Global Flags:
   -r, --read-only-mode        read-only mode (e.g. "-r")
 ```
 
+### Workspace Consumers Help
+```text
+$ tfc-ops workspaces consumers -h
+Add to workspace remote state consumers. (Possible future capability: list, replace, delete)
+
+Usage:
+  tfc-ops workspaces consumers [flags]
+
+Flags:
+      --consumers string   required - List of remote state consumer workspaces, comma-separated
+  -h, --help               help for consumers
+  -w, --workspace string   required - Partial workspace name to search across all workspaces
+
+Global Flags:
+  -o, --organization string   required - Name of Terraform Cloud Organization
+  -r, --read-only-mode        read-only mode (e.g. "-r")
+```
+
 ### Workspace List Help
 
 Any workspace attribute that can be read by the Terraform API can be retrieved
@@ -277,6 +295,23 @@ Usage:
 Flags:
   -h, --help                      help for apply
   -s, --set string                required - Terraform variable set to add
+  -w, --workspace string          Name of the Workspace in Terraform Cloud
+      --workspace-filter string   Partial workspace name to search across all workspaces
+
+Global Flags:
+  -o, --organization string   required - Name of Terraform Cloud Organization
+  -r, --read-only-mode        read-only mode (e.g. "-r")
+```
+
+### Variable Sets List Help
+```text
+List variable sets applied to a workspace
+
+Usage:
+  tfc-ops varsets list [flags]
+
+Flags:
+  -h, --help                      help for list
   -w, --workspace string          Name of the Workspace in Terraform Cloud
       --workspace-filter string   Partial workspace name to search across all workspaces
 

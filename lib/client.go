@@ -520,7 +520,7 @@ func AssignTeamAccess(workspaceID string, allTeamData AllTeamWorkspaceData) {
 			teamData.Relationships.Team.Data.ID,
 		)
 
-		resp := callAPI("POST", url, postData, nil)
+		resp := callAPI(http.MethodPost, url, postData, nil)
 		defer resp.Body.Close()
 	}
 	return
@@ -535,7 +535,7 @@ func CreateVariable(organization, workspaceName string, tfVar TFVar) {
 
 	postData := GetCreateVariablePayload(organization, workspaceName, tfVar)
 
-	resp := callAPI("POST", url, postData, nil)
+	resp := callAPI(http.MethodPost, url, postData, nil)
 
 	defer resp.Body.Close()
 	// bodyBytes, _ := ioutil.ReadAll(resp.Body)
@@ -584,7 +584,7 @@ func UpdateVariable(organization, workspaceName, variableID string, tfVar TFVar)
 
 	patchData := GetUpdateVariablePayload(organization, workspaceName, variableID, tfVar)
 
-	resp := callAPI("PATCH", url, patchData, nil)
+	resp := callAPI(http.MethodPatch, url, patchData, nil)
 
 	defer resp.Body.Close()
 	// bodyBytes, _ := ioutil.ReadAll(resp.Body)
@@ -602,7 +602,7 @@ func CreateWorkspace(oc OpsConfig, vcsTokenID string) (string, error) {
 
 	postData := GetCreateWorkspacePayload(oc, vcsTokenID)
 
-	resp := callAPI("POST", url, postData, nil)
+	resp := callAPI(http.MethodPost, url, postData, nil)
 
 	defer resp.Body.Close()
 	// bodyBytes, _ := ioutil.ReadAll(resp.Body)
@@ -626,7 +626,7 @@ func CreateWorkspace2(oc OpsConfig, vcsTokenID string) (Workspace, error) {
 
 	postData := GetCreateWorkspacePayload(oc, vcsTokenID)
 
-	resp := callAPI("POST", url, postData, nil)
+	resp := callAPI(http.MethodPost, url, postData, nil)
 
 	defer resp.Body.Close()
 	// bodyBytes, _ := ioutil.ReadAll(resp.Body)
@@ -981,7 +981,7 @@ func UpdateWorkspace(params WorkspaceUpdateParams) error {
 	}
 	for id, name := range foundWs {
 		url := fmt.Sprintf(baseURL+"/workspaces/%s", id)
-		resp := callAPI("PATCH", url, postData, nil)
+		resp := callAPI(http.MethodPatch, url, postData, nil)
 		bodyBytes, _ := ioutil.ReadAll(resp.Body)
 		_ = resp.Body.Close()
 
@@ -1246,4 +1246,27 @@ func ListWorkspaceVariableSets(workspaceID string) (VariableSetList, error) {
 	}
 
 	return variableSetList, nil
+}
+
+func AddRemoteStateConsumers(workspaceID string, consumerIDs []string) error {
+	u := NewTfcUrl(fmt.Sprintf("/workspaces/%s/relationships/remote-state-consumers", workspaceID))
+
+	data := gabs.New()
+	_, err := data.ArrayOfSize(len(consumerIDs), "data")
+	if err != nil {
+		return fmt.Errorf("ArrayOfSize failed in AddRemoteStateConsumers: %w", err)
+	}
+	for i, id := range consumerIDs {
+		if _, err := data.S("data").SetIndex(map[string]any{
+			"type": "workspace",
+			"id":   id,
+		}, i); err != nil {
+			return fmt.Errorf("SetIndex failed in AddRemoteStateConsumers: %w", err)
+		}
+	}
+	postData := data.String()
+
+	_ = callAPI(http.MethodPost, u.String(), postData, nil)
+
+	return nil
 }

@@ -350,6 +350,12 @@ func getWorkspacePage(url string) (WorkspaceList, error) {
 }
 
 func GetWorkspaceData(organization, workspaceName string) (WorkspaceJSON, error) {
+	if organization == "" {
+		return WorkspaceJSON{}, fmt.Errorf("GetWorkspaceData: organization is required")
+	}
+	if workspaceName == "" {
+		return WorkspaceJSON{}, fmt.Errorf("GetWorkspaceData: workspace is required")
+	}
 	u := NewTfcUrl(fmt.Sprintf(
 		"/organizations/%s/workspaces/%s",
 		organization,
@@ -1258,7 +1264,7 @@ func AddRemoteStateConsumers(workspaceID string, consumerIDs []string) error {
 	}
 	for i, id := range consumerIDs {
 		if _, err := data.S("data").SetIndex(map[string]any{
-			"type": "workspace",
+			"type": "workspaces",
 			"id":   id,
 		}, i); err != nil {
 			return fmt.Errorf("SetIndex failed in AddRemoteStateConsumers: %w", err)

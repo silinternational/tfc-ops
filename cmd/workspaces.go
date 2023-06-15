@@ -29,4 +29,5 @@ var workspaceCmd = &cobra.Command{
 func init() {
 	rootCmd.AddCommand(workspaceCmd)
 	addGlobalFlags(workspaceCmd)
+	addConsumersCommand(workspaceCmd)
 }

@@ -23,7 +23,7 @@ import (
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 
-	"github.com/silinternational/tfc-ops/lib"
+	"github.com/silinternational/tfc-ops/v3/lib"
 )
 
 const requiredPrefix = "required - "

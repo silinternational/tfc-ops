@@ -14,7 +14,7 @@
 
 package main
 
-import "github.com/silinternational/tfc-ops/cmd"
+import "github.com/silinternational/tfc-ops/v3/cmd"
 
 func main() {
 	cmd.Execute()

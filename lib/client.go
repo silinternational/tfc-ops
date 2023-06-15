@@ -52,6 +52,7 @@ type CloneConfig struct {
 	AtlasTokenDestination       string
 	CopyState                   bool
 	CopyVariables               bool
+	ApplyVariableSets           bool
 	DifferentDestinationAccount bool
 }
 
@@ -244,7 +245,7 @@ type WorkspaceUpdateParams struct {
 }
 
 // ConvertHCLVariable changes a TFVar struct in place by escaping
-//  the double quotes and line endings in the Value attribute
+// the double quotes and line endings in the Value attribute
 func ConvertHCLVariable(tfVar *TFVar) {
 	if !tfVar.Hcl {
 		return
@@ -615,12 +616,37 @@ func CreateWorkspace(oc OpsConfig, vcsTokenID string) (string, error) {
 	return wsData.Data.ID, nil
 }
 
+// CreateWorkspace2 makes a Terraform workspaces API call to create a workspace for a given organization, including
+// setting up its VCS repo integration. Returns the properties of the new workspace.
+func CreateWorkspace2(oc OpsConfig, vcsTokenID string) (Workspace, error) {
+	url := fmt.Sprintf(
+		baseURL+"/organizations/%s/workspaces",
+		oc.NewOrg,
+	)
+
+	postData := GetCreateWorkspacePayload(oc, vcsTokenID)
+
+	resp := callAPI("POST", url, postData, nil)
+
+	defer resp.Body.Close()
+	// bodyBytes, _ := ioutil.ReadAll(resp.Body)
+	// fmt.Println(string(bodyBytes))
+
+	var wsData WorkspaceJSON
+
+	if err := json.NewDecoder(resp.Body).Decode(&wsData); err != nil {
+		return Workspace{}, fmt.Errorf("error getting created workspace data: %s\n", err)
+	}
+	return wsData.Data, nil
+}
+
 // RunTFInit ...
-//  - removes old terraform.tfstate files
-//  - runs terraform init with old versions
-//  - runs terraform init with new version
+//   - removes old terraform.tfstate files
+//   - runs terraform init with old versions
+//   - runs terraform init with new version
+//
 // NOTE: This procedure can be used to copy/migrate a workspace's state to a new one.
-//  (see the -backend-config mention below and the backend.tf file in this repo)
+// (see the -backend-config mention below and the backend.tf file in this repo)
 func RunTFInit(oc OpsConfig, tfToken, tfTokenDestination string) error {
 	var tfInit string
 	var err error
@@ -696,11 +722,12 @@ func RunTFInit(oc OpsConfig, tfToken, tfTokenDestination string) error {
 }
 
 // CloneWorkspace gets the data, variables and team access data for an existing Terraform Cloud workspace
-//  and then creates a clone of it with the same data.
+// and then creates a clone of it with the same data.
+//
 // If the copyVariables param is set to true, then all the non-sensitive variable values will be added to the new
-//   workspace.  Otherwise, they will be set to "REPLACE_THIS_VALUE"
+// workspace.  Otherwise, they will be set to "REPLACE_THIS_VALUE"
 func CloneWorkspace(cfg CloneConfig) ([]string, error) {
-	wsData, err := GetWorkspaceData(cfg.Organization, cfg.SourceWorkspace)
+	sourceWsData, err := GetWorkspaceData(cfg.Organization, cfg.SourceWorkspace)
 	if err != nil {
 		return []string{}, err
 	}
@@ -712,18 +739,18 @@ func CloneWorkspace(cfg CloneConfig) ([]string, error) {
 
 	if !cfg.DifferentDestinationAccount {
 		cfg.NewOrganization = cfg.Organization
-		cfg.NewVCSTokenID = wsData.Data.Attributes.VCSRepo.Identifier
+		cfg.NewVCSTokenID = sourceWsData.Data.Attributes.VCSRepo.Identifier
 	}
 
 	oc := OpsConfig{
 		SourceOrg:        cfg.Organization,
-		SourceName:       wsData.Data.Attributes.Name,
+		SourceName:       sourceWsData.Data.Attributes.Name,
 		NewOrg:           cfg.NewOrganization,
 		NewName:          cfg.NewWorkspace,
-		TerraformVersion: wsData.Data.Attributes.TerraformVersion,
-		RepoID:           wsData.Data.Attributes.VCSRepo.Identifier,
-		Branch:           wsData.Data.Attributes.VCSRepo.Branch,
-		Directory:        wsData.Data.Attributes.WorkingDirectory,
+		TerraformVersion: sourceWsData.Data.Attributes.TerraformVersion,
+		RepoID:           sourceWsData.Data.Attributes.VCSRepo.Identifier,
+		Branch:           sourceWsData.Data.Attributes.VCSRepo.Branch,
+		Directory:        sourceWsData.Data.Attributes.WorkingDirectory,
 	}
 
 	sensitiveVars := []string{}
@@ -773,11 +800,20 @@ func CloneWorkspace(cfg CloneConfig) ([]string, error) {
 		return sensitiveVars, nil
 	}
 
-	_, err = CreateWorkspace(oc, wsData.Data.Attributes.VCSRepo.TokenID)
+	destWsProps, err := CreateWorkspace2(oc, sourceWsData.Data.Attributes.VCSRepo.TokenID)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create new workspace: %w", err)
+	}
+
+	err = copyVariableSetList(sourceWsData.Data.ID, destWsProps.ID)
+	if err != nil {
+		return nil, fmt.Errorf("failed to clone variable sets: %w", err)
+	}
+
 	CreateAllVariables(oc.NewOrg, oc.NewName, tfVars)
 
 	// Get Team Access Data for source Workspace
-	allTeamData, err := GetTeamAccessFrom(wsData.Data.ID)
+	allTeamData, err := GetTeamAccessFrom(sourceWsData.Data.ID)
 	if err != nil {
 		return sensitiveVars, err
 	}
@@ -795,7 +831,7 @@ func CloneWorkspace(cfg CloneConfig) ([]string, error) {
 
 // AddOrUpdateVariable adds or updates an existing Terraform Cloud workspace variable
 // If the copyVariables param is set to true, then all the non-sensitive variable values will be added to the new
-//   workspace.  Otherwise, they will be set to "REPLACE_THIS_VALUE"
+// workspace.  Otherwise, they will be set to "REPLACE_THIS_VALUE"
 func AddOrUpdateVariable(cfg UpdateConfig) (string, error) {
 	variables, err := GetVarsFromWorkspace(cfg.Organization, cfg.Workspace)
 	if err != nil {
@@ -1168,4 +1204,46 @@ func ApplyVariableSet(varsetID string, workspaceIDs []string) error {
 	_ = callAPI(http.MethodPost, u.String(), postData, nil)
 	// TODO: need to look at response?
 	return nil
+}
+
+func copyVariableSetList(sourceWorkspaceID, destinationWorkspaceID string) error {
+	sets, err := ListWorkspaceVariableSets(sourceWorkspaceID)
+	if err != nil {
+		return fmt.Errorf("copy variable sets: %w", err)
+	}
+	if err := ApplyVariableSetsToWorkspace(sets, destinationWorkspaceID); err != nil {
+		return fmt.Errorf("copy variable sets: %w", err)
+	}
+	return nil
+}
+
+func ApplyVariableSetsToWorkspace(sets VariableSetList, workspaceID string) error {
+	var failed []string
+	var err error
+	for _, set := range sets.Data {
+		err = ApplyVariableSet(set.ID, []string{workspaceID})
+		if err != nil {
+			failed = append(failed, set.Attributes.Name)
+		}
+	}
+	if len(failed) == len(sets.Data) {
+		return fmt.Errorf("failed to apply variable sets: %w", err)
+	}
+	if len(failed) > 0 {
+		return fmt.Errorf("failed to apply variable sets %s: %w", strings.Join(failed, ", "), err)
+	}
+	return nil
+}
+
+func ListWorkspaceVariableSets(workspaceID string) (VariableSetList, error) {
+	u := NewTfcUrl(fmt.Sprintf("/workspaces/%s/varsets", workspaceID))
+
+	resp := callAPI(http.MethodGet, u.String(), "", nil)
+
+	var variableSetList VariableSetList
+	if err := json.NewDecoder(resp.Body).Decode(&variableSetList); err != nil {
+		return variableSetList, fmt.Errorf("unexpected content retrieving variable set list: %w", err)
+	}
+
+	return variableSetList, nil
 }

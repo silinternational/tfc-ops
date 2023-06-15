@@ -20,7 +20,6 @@ import (
 	"os"
 	"strings"
 
-	"github.com/mitchellh/go-homedir"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 
@@ -84,11 +83,8 @@ func initConfig() {
 		viper.SetConfigFile(cfgFile)
 	} else {
 		// Find home directory.
-		home, err := homedir.Dir()
-		if err != nil {
-			fmt.Println(err)
-			os.Exit(1)
-		}
+		home, err := os.UserHomeDir()
+		cobra.CheckErr(err)
 
 		// Search config in home directory with name ".tfc-ops" (without extension).
 		viper.AddConfigPath(home)

@@ -11,6 +11,8 @@ type RunConfig struct {
 	WorkspaceID string
 }
 
+// CreateRun creates a Run, which starts a Plan, which can later be Applied.
+// https://developer.hashicorp.com/terraform/cloud-docs/api-docs/run
 func CreateRun(config RunConfig) error {
 	u := NewTfcUrl("/runs")
 	payload := buildRunPayload(config.Message, config.WorkspaceID)

@@ -30,7 +30,7 @@ func buildRunPayload(message, workspaceID string) string {
 		return "unable to process attribute for update:" + err.Error()
 	}
 
-	if _, err = data.SetP(workspaceID, "data.relationships.data.id"); err != nil {
+	if _, err = data.SetP(workspaceID, "data.relationships.workspace.data.id"); err != nil {
 		return "unable to process attribute for update:" + err.Error()
 	}
 

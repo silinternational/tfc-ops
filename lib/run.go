@@ -25,15 +25,15 @@ func buildRunPayload(message, workspaceID string) string {
 
 	_, err := data.Object("data")
 	if err != nil {
-		return "error"
+		return "unable to create run payload:" + err.Error()
 	}
 
 	if _, err = data.SetP(message, "data.attributes.message"); err != nil {
-		return "unable to process attribute for update:" + err.Error()
+		return "unable to process message for run payload:" + err.Error()
 	}
 
 	if _, err = data.SetP(workspaceID, "data.relationships.workspace.data.id"); err != nil {
-		return "unable to process attribute for update:" + err.Error()
+		return "unable to process workspace ID for run payload:" + err.Error()
 	}
 
 	return data.String()

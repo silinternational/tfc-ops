@@ -25,15 +25,15 @@ func buildRunPayload(message, workspaceID string) string {
 
 	_, err := data.Object("data")
 	if err != nil {
-		return "error"
+		return "unable to create run payload:" + err.Error()
 	}
 
 	if _, err = data.SetP(message, "data.attributes.message"); err != nil {
-		return "unable to process attribute for update:" + err.Error()
+		return "unable to process message for run payload:" + err.Error()
 	}
 
 	if _, err = data.SetP(workspaceID, "data.relationships.workspace.data.id"); err != nil {
-		return "unable to process attribute for update:" + err.Error()
+		return "unable to process workspace ID for run payload:" + err.Error()
 	}
 
 	return data.String()
@@ -56,15 +56,15 @@ func buildRunTriggerPayload(sourceWorkspaceID string) string {
 
 	_, err := data.Object("data")
 	if err != nil {
-		return "error"
+		return "unable to create run trigger payload:" + err.Error()
 	}
 
-	if _, err = data.SetP(sourceWorkspaceID, "data.relationships.sourceable.data.id"); err != nil {
-		return "unable to process attribute for update:" + err.Error()
-	}
-
-	if _, err = data.SetP("workspaces", "data.relationships.sourceable.data.type"); err != nil {
-		return "unable to process attribute for update:" + err.Error()
+	workspaceObject := gabs.Wrap(map[string]any{
+		"type": "workspaces",
+		"id":   sourceWorkspaceID,
+	})
+	if _, err = data.SetP(workspaceObject, "data.relationships.sourceable.data"); err != nil {
+		return "unable to complete run trigger payload:" + err.Error()
 	}
 
 	return data.String()

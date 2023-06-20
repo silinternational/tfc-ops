@@ -38,34 +38,3 @@ func buildRunPayload(message, workspaceID string) string {
 
 	return data.String()
 }
-
-type RunTriggerConfig struct {
-	WorkspaceID       string
-	SourceWorkspaceID string
-}
-
-func CreateRunTrigger(config RunTriggerConfig) error {
-	u := NewTfcUrl("/workspaces/" + config.WorkspaceID + "/run-triggers")
-	payload := buildRunTriggerPayload(config.SourceWorkspaceID)
-	_ = callAPI(http.MethodPost, u.String(), payload, nil)
-	return nil
-}
-
-func buildRunTriggerPayload(sourceWorkspaceID string) string {
-	data := gabs.New()
-
-	_, err := data.Object("data")
-	if err != nil {
-		return "unable to create run trigger payload:" + err.Error()
-	}
-
-	workspaceObject := gabs.Wrap(map[string]any{
-		"type": "workspaces",
-		"id":   sourceWorkspaceID,
-	})
-	if _, err = data.SetP(workspaceObject, "data.relationships.sourceable.data"); err != nil {
-		return "unable to complete run trigger payload:" + err.Error()
-	}
-
-	return data.String()
-}

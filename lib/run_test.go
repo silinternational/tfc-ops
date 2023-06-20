@@ -10,10 +10,3 @@ func Test_buildRunPayload(t *testing.T) {
 		t.Fatalf("did not get expected result, got %s", got)
 	}
 }
-
-func Test_buildRunTriggerPayload(t *testing.T) {
-	got := buildRunTriggerPayload("ws_id")
-	if got != `{"data":{"relationships":{"sourceable":{"data":{"id":"ws_id","type":"workspaces"}}}}}` {
-		t.Fatalf("did not get expected result, got %s", got)
-	}
-}

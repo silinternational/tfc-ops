@@ -14,6 +14,7 @@ const (
 	paramFilterWorkspaceName    = "filter[workspace][name]"
 	paramPageSize               = "page[size]"
 	paramPageNumber             = "page[number]"
+	paramFilterRunTriggerType   = "filter[run-trigger][type]"
 	paramSearchName             = "search[name]"
 )
 
@@ -21,6 +22,7 @@ type TfcUrl struct {
 	url.URL
 }
 
+// NewTfcUrl creates a url.URL object for the Terraform Cloud API.
 func NewTfcUrl(path string) TfcUrl {
 	newURL, _ := url.Parse(baseURL + path)
 	v := url.Values{}

@@ -78,7 +78,9 @@ type ListRunTriggerConfig struct {
 // ListRunTriggers returns a list of run triggers configured for the given workspace
 // https://developer.hashicorp.com/terraform/cloud-docs/api-docs/run-triggers#list-run-triggers
 func ListRunTriggers(config ListRunTriggerConfig) ([]RunTrigger, error) {
-	u := NewTfcUrl("/workspaces/" + config.WorkspaceID + "/run-triggers?filter%5Brun-trigger%5D%5Btype%5D=" + config.Type)
+	u := NewTfcUrl("/workspaces/" + config.WorkspaceID + "/run-triggers")
+	u.SetParam(paramFilterRunTriggerType, config.Type)
+
 	resp := callAPI(http.MethodGet, u.String(), "", nil)
 	triggers, err := parseRunTriggerListResponse(resp.Body)
 	if err != nil {

@@ -40,12 +40,12 @@ func buildRunTriggerPayload(sourceWorkspaceID string) string {
 }
 
 type FindRunTriggerConfig struct {
-	SourceID    string
-	WorkspaceID string
+	SourceWorkspaceID string
+	WorkspaceID       string
 }
 
 // FindRunTrigger searches all the run triggers inbound to the given WorkspaceID. If a run trigger is configured for
-// the given SourceID, that trigger is returned. Otherwise, nil is returned.
+// the given SourceWorkspaceID, that trigger is returned. Otherwise, nil is returned.
 func FindRunTrigger(config FindRunTriggerConfig) (*RunTrigger, error) {
 	triggers, err := ListRunTriggers(ListRunTriggerConfig{
 		WorkspaceID: config.WorkspaceID,
@@ -55,7 +55,7 @@ func FindRunTrigger(config FindRunTriggerConfig) (*RunTrigger, error) {
 		return nil, fmt.Errorf("failed to list run triggers: %w", err)
 	}
 	for _, t := range triggers {
-		if t.SourceID == config.SourceID {
+		if t.SourceID == config.SourceWorkspaceID {
 			return &t, nil
 		}
 	}

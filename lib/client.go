@@ -311,6 +311,24 @@ func GetUpdateVariablePayload(organization, workspaceName, variableID string, tf
 `, variableID, tfVar.Key, tfVar.Value, tfVar.Hcl, tfVar.Sensitive, organization, workspaceName)
 }
 
+// OrganizationExists returns whether an organization with the given name exists
+func OrganizationExists(organization string) (bool, err) {
+	if organization == "" {
+		return false, fmt.Errorf("OrganizationExists: organization is required")
+	}
+	u := NewTfcUrl(fmt.Sprintf(
+		"/organizations/%s",
+		organization,
+	))
+
+	resp := callAPI(http.MethodGet, u.String(), "", nil)
+
+	defer resp.Body.Close()
+
+	// Status 200 indicates the organization exists
+	return resp.StatusCode == 200, nil
+}
+
 // GetAllWorkspaces retrieves all workspaces from Terraform Cloud and returns a list of Workspace objects
 func GetAllWorkspaces(organization string) ([]Workspace, error) {
 	u := NewTfcUrl(fmt.Sprintf("/organizations/%s/workspaces", organization))
@@ -395,6 +413,17 @@ func GetWorkspaceVar(organization, wsName, key string) (*Var, error) {
 
 // GetVarsFromWorkspace returns a list of Terraform variables for a given workspace
 func GetVarsFromWorkspace(organization, workspaceName string) ([]Var, error) {
+	orgExists, err := OrganizationExists(organization)
+	if err != nil {
+		return []Var{}, fmt.Errorf("GetVarsFromWorkspace: organization is required")
+	} else if !orgExists {
+		return []Var{}, fmt.Errorf("GetVarsFromWorkspace: invalid organization %s", organization)
+	}
+
+	if workspaceName == "" {
+		return []Var{}, fmt.Errorf("GetVarsFromWorkspace: workspace is required")
+	}
+
 	u := NewTfcUrl("/vars")
 	u.SetParam(paramFilterOrganizationName, organization)
 	u.SetParam(paramFilterWorkspaceName, workspaceName)

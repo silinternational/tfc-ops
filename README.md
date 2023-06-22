@@ -159,6 +159,7 @@ Flags:
 Global Flags:
   -o, --organization string   required - Name of Terraform Cloud Organization
   -r, --read-only-mode        read-only mode (e.g. "-r")
+  -s, --suppress-header       suppress the header from CSV output
 ```
 
 ### Workspace Update Help
@@ -226,6 +227,7 @@ Global Flags:
   -o, --organization string   required - Name of Terraform Cloud Organization
   -r, --read-only-mode        read-only mode (e.g. "-r")
   -w, --workspace string      Name of the Workspace in Terraform Cloud
+  -s, --suppress-header       suppress the header from CSV output
 ```
 
 ### Variables Update Help

@@ -32,7 +32,9 @@ var listCmd = &cobra.Command{
 	Long:  `Lists the TF workspaces with (some of) their attributes`,
 	Args:  cobra.ExactArgs(0),
 	Run: func(cmd *cobra.Command, args []string) {
-		fmt.Println("Getting list of workspaces ...")
+		if !suppressCSVHeader {
+			fmt.Println("Getting list of workspaces ...")
+		}
 		runList()
 	},
 }

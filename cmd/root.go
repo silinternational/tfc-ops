@@ -29,10 +29,11 @@ import (
 const requiredPrefix = "required - "
 
 var (
-	cfgFile      string
-	organization string
-	readOnlyMode bool
-	errLog       *log.Logger
+	cfgFile      		string
+	organization 		string
+	readOnlyMode 		bool
+	suppressCSVHeader	bool
+	errLog       		*log.Logger
 )
 
 // rootCmd represents the base command when called without any subcommands
@@ -104,6 +105,10 @@ func addGlobalFlags(command *cobra.Command) {
 		`read-only mode (e.g. "-r")`,
 	)
 
+	command.PersistentFlags().BoolVarP(&suppressCSVHeader, "suppress-header", "s", false,
+		`suppress the header from CSV output`,
+	)
+
 	command.PersistentFlags().StringVarP(&organization, "organization",
 		"o", "", requiredPrefix+"Name of Terraform Cloud Organization")
 	if err := command.MarkPersistentFlagRequired("organization"); err != nil {
@@ -128,12 +133,20 @@ func workspaceListToString(wsNames []string) string {
 		return ""
 	}
 
-	s := ""
+	content := ""
+	header := ""
 	if len(wsNames) > 1 {
-		s = "workspaces: " + strings.Join(wsNames, ", ")
+		header = "workspaces: %s"
+		content = strings.Join(wsNames, ", ")
+		
 	} else {
-		s = "workspace '" + wsNames[0] + "'"
+		header = "workspace '%s'"
+		content = wsNames[0]
 	}
-
-	return s
+	
+	if suppressCSVHeader {
+		return content
+	} else {
+		return fmt.Sprintf(header, content)
+	}
 }

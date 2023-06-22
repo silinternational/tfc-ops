@@ -44,7 +44,9 @@ var variablesListCmd = &cobra.Command{
 		}
 
 		if tabularCSV {
-			fmt.Println("workspace,key,value")
+			if !suppressCSVHeader {
+				fmt.Println("workspace,key,value")
+			}
 		} else {
 			keyMsg := ""
 			valMsg := ""

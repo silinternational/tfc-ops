@@ -316,10 +316,7 @@ func OrganizationExists(organization string) (bool, err) {
 	if organization == "" {
 		return false, fmt.Errorf("OrganizationExists: organization is required")
 	}
-	u := NewTfcUrl(fmt.Sprintf(
-		"/organizations/%s",
-		organization,
-	))
+	u := NewTfcUrl("/organizations/" + organization)
 
 	resp := callAPI(http.MethodGet, u.String(), "", nil)
 

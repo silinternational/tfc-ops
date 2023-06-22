@@ -312,7 +312,7 @@ func GetUpdateVariablePayload(organization, workspaceName, variableID string, tf
 }
 
 // OrganizationExists returns whether an organization with the given name exists
-func OrganizationExists(organization string) (bool, err) {
+func OrganizationExists(organization string) (bool, error) {
 	if organization == "" {
 		return false, fmt.Errorf("OrganizationExists: organization is required")
 	}
@@ -337,7 +337,7 @@ func GetAllWorkspaces(organization string) ([]Workspace, error) {
 		u.SetParam(paramPageNumber, strconv.Itoa(page))
 		nextWsData, err := getWorkspacePage(u.String())
 		if err != nil {
-			return []Workspace{}, fmt.Errorf("error getting workspace data for %s: %s", organization, err)
+			return nil, fmt.Errorf("error getting workspace data for %s: %s", organization, err)
 		}
 		allWsData = append(allWsData, nextWsData.Data...)
 
@@ -412,9 +412,9 @@ func GetWorkspaceVar(organization, wsName, key string) (*Var, error) {
 func GetVarsFromWorkspace(organization, workspaceName string) ([]Var, error) {
 	orgExists, err := OrganizationExists(organization)
 	if err != nil {
-		return []Var{}, fmt.Errorf("GetVarsFromWorkspace: organization is required: %w", err)
+		return nil, fmt.Errorf("GetVarsFromWorkspace: organization is required: %w", err)
 	} else if !orgExists {
-		return []Var{}, fmt.Errorf("GetVarsFromWorkspace: invalid organization %s", organization)
+		return nil, fmt.Errorf("GetVarsFromWorkspace: invalid organization %s", organization)
 	}
 
 	if workspaceName == "" {
@@ -434,7 +434,7 @@ func GetVarsFromWorkspace(organization, workspaceName string) ([]Var, error) {
 	var varsResp VarsResponse
 
 	if err := json.NewDecoder(resp.Body).Decode(&varsResp); err != nil {
-		return []Var{}, fmt.Errorf("Error getting variables for %s:%s ...\n%s", organization, workspaceName, err.Error())
+		return nil, fmt.Errorf("Error getting variables for %s:%s ...\n%s", organization, workspaceName, err.Error())
 	}
 
 	variables := []Var{}
@@ -478,7 +478,7 @@ func SearchVariables(organization, wsName, keyContains, valueContains string) ([
 	vars, err := GetVarsFromWorkspace(organization, wsName)
 	if err != nil {
 		err := fmt.Errorf("Error getting variables for %s:%s\n%s", organization, wsName, err.Error())
-		return []Var{}, err
+		return nil, err
 	}
 
 	var wsVars []Var
@@ -761,12 +761,12 @@ func RunTFInit(oc OpsConfig, tfToken, tfTokenDestination string) error {
 func CloneWorkspace(cfg CloneConfig) ([]string, error) {
 	sourceWsData, err := GetWorkspaceData(cfg.Organization, cfg.SourceWorkspace)
 	if err != nil {
-		return []string{}, err
+		return nil, err
 	}
 
 	variables, err := GetVarsFromWorkspace(cfg.Organization, cfg.SourceWorkspace)
 	if err != nil {
-		return []string{}, err
+		return nil, err
 	}
 
 	if !cfg.DifferentDestinationAccount {

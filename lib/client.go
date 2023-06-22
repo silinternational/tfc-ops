@@ -412,13 +412,13 @@ func GetWorkspaceVar(organization, wsName, key string) (*Var, error) {
 func GetVarsFromWorkspace(organization, workspaceName string) ([]Var, error) {
 	orgExists, err := OrganizationExists(organization)
 	if err != nil {
-		return []Var{}, fmt.Errorf("GetVarsFromWorkspace: organization is required")
+		return []Var{}, fmt.Errorf("GetVarsFromWorkspace: organization is required: %w", err)
 	} else if !orgExists {
 		return []Var{}, fmt.Errorf("GetVarsFromWorkspace: invalid organization %s", organization)
 	}
 
 	if workspaceName == "" {
-		return []Var{}, fmt.Errorf("GetVarsFromWorkspace: workspace is required")
+		return nil, fmt.Errorf("GetVarsFromWorkspace: workspace is required")
 	}
 
 	u := NewTfcUrl("/vars")

@@ -29,11 +29,11 @@ import (
 const requiredPrefix = "required - "
 
 var (
-	cfgFile      		string
-	organization 		string
-	readOnlyMode 		bool
-	suppressCSVHeader	bool
-	errLog       		*log.Logger
+	cfgFile           string
+	organization      string
+	readOnlyMode      bool
+	suppressCSVHeader bool
+	errLog            *log.Logger
 )
 
 // rootCmd represents the base command when called without any subcommands
@@ -138,12 +138,12 @@ func workspaceListToString(wsNames []string) string {
 	if len(wsNames) > 1 {
 		header = "workspaces: %s"
 		content = strings.Join(wsNames, ", ")
-		
+
 	} else {
 		header = "workspace '%s'"
 		content = wsNames[0]
 	}
-	
+
 	if suppressCSVHeader {
 		return content
 	} else {

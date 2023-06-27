@@ -323,7 +323,7 @@ func OrganizationExists(organization string) (bool, error) {
 	defer resp.Body.Close()
 
 	// Status 200 indicates the organization exists
-	return resp.StatusCode == 200, nil
+	return resp.StatusCode == http.StatusOK, nil
 }
 
 // GetAllWorkspaces retrieves all workspaces from Terraform Cloud and returns a list of Workspace objects

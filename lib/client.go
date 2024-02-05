@@ -586,25 +586,22 @@ func CreateAllVariables(organization, workspaceName string, tfVars []TFVar) {
 // GetCreateWorkspacePayload returns the JSON needed to make a POST to the
 // Terraform workspaces API
 func GetCreateWorkspacePayload(oc OpsConfig, vcsTokenID string) string {
-	return fmt.Sprintf(`
-{
-  "data": {
-    "attributes": {
-      "name": "%s",
-      "terraform_version": "%s",
-      "working-directory": "%s",
-      "vcs-repo": {
-        "identifier": "%s",
-        "oauth-token-id": "%s",
-        "branch": "%s",
-        "default-branch": true
-      }
-    },
-    "type": "workspaces"
-  }
+	jsonObj := gabs.Wrap(map[string]any{
+		"data": map[string]any{
+			"type": "workspaces",
+		},
+	})
+	_, _ = jsonObj.SetP(oc.NewName, "data.attributes.name")
+	_, _ = jsonObj.SetP(oc.TerraformVersion, "data.attributes.terraform_version")
+	_, _ = jsonObj.SetP(oc.Directory, "data.attributes.working-directory")
+	if vcsTokenID != "" {
+		_, _ = jsonObj.SetP(oc.RepoID, "data.attributes.vcs-repo.identifier")
+		_, _ = jsonObj.SetP(vcsTokenID, "data.attributes.vcs-repo.oauth-token-id")
+		_, _ = jsonObj.SetP(oc.Branch, "data.attributes.vcs-repo.branch")
+		_, _ = jsonObj.SetP(true, "data.attributes.vcs-repo.default-branch")
+	}
 
-}
-  `, oc.NewName, oc.TerraformVersion, oc.Directory, oc.RepoID, vcsTokenID, oc.Branch)
+	return jsonObj.String()
 }
 
 // UpdateVariable makes a Terraform vars API call to update a variable

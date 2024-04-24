@@ -56,12 +56,7 @@ func init() {
 		requiredPrefix+"Value")
 	workspaceUpdateCmd.Flags().StringVarP(&workspaceFilter, flagWorkspaceFilter, "w", "",
 		requiredPrefix+"Partial workspace name to search across all workspaces")
-	workspaceUpdateCmd.Flags().BoolVarP(&readOnlyMode, "dry-run-mode", "d", false,
-		`dry run mode only. (e.g. "-d")`,
-	)
-	if err := updateCmd.Flags().MarkDeprecated("dry-run-mode", "use -r for read-only-mode"); err != nil {
-		errLog.Fatalln(err)
-	}
+
 	requiredFlags := []string{flagAttribute, flagValue, flagWorkspaceFilter}
 	for _, flag := range requiredFlags {
 		if err := workspaceUpdateCmd.MarkFlagRequired(flag); err != nil {

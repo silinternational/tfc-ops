@@ -229,14 +229,6 @@ type AllTeamWorkspaceData struct {
 	Data []TeamWorkspaceData `json:"data"`
 }
 
-// TFVar matches the attributes of a terraform environment/workspace's variable
-type TFVar struct {
-	Key       string `json:"key"`
-	Value     string `json:"value"`
-	Hcl       bool   `json:"hcl"`
-	Sensitive bool   `json:"sensitive"`
-}
-
 type WorkspaceUpdateParams struct {
 	Organization    string
 	WorkspaceFilter string
@@ -244,9 +236,9 @@ type WorkspaceUpdateParams struct {
 	Value           string
 }
 
-// ConvertHCLVariable changes a TFVar struct in place by escaping
+// ConvertHCLVariable changes a Var struct in place by escaping
 // the double quotes and line endings in the Value attribute
-func ConvertHCLVariable(tfVar *TFVar) {
+func ConvertHCLVariable(tfVar *Var) {
 	if !tfVar.Hcl {
 		return
 	}
@@ -257,7 +249,7 @@ func ConvertHCLVariable(tfVar *TFVar) {
 
 // GetCreateVariablePayload returns the json needed to make a Post to the
 // Terraform vars api
-func GetCreateVariablePayload(organization, workspaceName string, tfVar TFVar) string {
+func GetCreateVariablePayload(organization, workspaceName string, tfVar Var) string {
 	return fmt.Sprintf(`
 {
   "data": {
@@ -284,7 +276,7 @@ func GetCreateVariablePayload(organization, workspaceName string, tfVar TFVar) s
 
 // GetUpdateVariablePayload returns the json needed to make a Post to the
 // Terraform vars api
-func GetUpdateVariablePayload(organization, workspaceName, variableID string, tfVar TFVar) string {
+func GetUpdateVariablePayload(organization, workspaceName, variableID string, tfVar Var) string {
 	return fmt.Sprintf(`
 {
   "data": {
@@ -566,7 +558,7 @@ func AssignTeamAccess(workspaceID string, allTeamData AllTeamWorkspaceData) {
 
 // CreateVariable makes a Terraform vars API POST to create a variable
 // for a given organization and workspace
-func CreateVariable(organization, workspaceName string, tfVar TFVar) {
+func CreateVariable(organization, workspaceName string, tfVar Var) {
 	url := baseURL + "/vars"
 
 	ConvertHCLVariable(&tfVar)
@@ -582,7 +574,7 @@ func CreateVariable(organization, workspaceName string, tfVar TFVar) {
 
 // CreateAllVariables makes several Terraform vars API POSTs to create
 // variables for a given organization and workspace
-func CreateAllVariables(organization, workspaceName string, tfVars []TFVar) {
+func CreateAllVariables(organization, workspaceName string, tfVars []Var) {
 	for _, nextVar := range tfVars {
 		CreateVariable(organization, workspaceName, nextVar)
 	}
@@ -611,7 +603,7 @@ func GetCreateWorkspacePayload(oc OpsConfig, vcsTokenID string) string {
 
 // UpdateVariable makes a Terraform vars API call to update a variable
 // for a given organization and workspace
-func UpdateVariable(organization, workspaceName, variableID string, tfVar TFVar) {
+func UpdateVariable(organization, workspaceName, variableID string, tfVar Var) {
 	url := fmt.Sprintf(baseURL+"/vars/%s", variableID)
 
 	ConvertHCLVariable(&tfVar)
@@ -789,18 +781,18 @@ func CloneWorkspace(cfg CloneConfig) ([]string, error) {
 	sensitiveValue := "TF_ENTERPRISE_SENSITIVE_VAR"
 	defaultValue := "REPLACE_THIS_VALUE"
 
-	tfVars := []TFVar{}
-	var tfVar TFVar
+	tfVars := []Var{}
+	var tfVar Var
 
 	for _, nextVar := range variables {
 		if cfg.CopyVariables {
-			tfVar = TFVar{
+			tfVar = Var{
 				Key:   nextVar.Key,
 				Value: nextVar.Value,
 				Hcl:   nextVar.Hcl,
 			}
 		} else {
-			tfVar = TFVar{
+			tfVar = Var{
 				Key:   nextVar.Key,
 				Value: defaultValue,
 				Hcl:   nextVar.Hcl,
@@ -818,7 +810,8 @@ func CloneWorkspace(cfg CloneConfig) ([]string, error) {
 
 	if cfg.DifferentDestinationAccount {
 		config.token = cfg.AtlasTokenDestination
-		if _, err := CreateWorkspace(oc, cfg.NewVCSTokenID); err != nil {
+		_, err := CreateWorkspace(oc, cfg.NewVCSTokenID)
+		if err != nil {
 			return nil, err
 		}
 		CreateAllVariables(oc.NewOrg, oc.NewName, tfVars)
@@ -879,7 +872,7 @@ func AddOrUpdateVariable(cfg UpdateConfig) (string, error) {
 				continue
 			}
 			// Found a match
-			tfVar := TFVar{Key: nextVar.Key, Value: cfg.NewValue, Hcl: false, Sensitive: cfg.SensitiveVariable}
+			tfVar := Var{Key: nextVar.Key, Value: cfg.NewValue, Hcl: false, Sensitive: cfg.SensitiveVariable}
 			if !config.readOnly {
 				UpdateVariable(cfg.Organization, cfg.Workspace, nextVar.ID, tfVar)
 			}
@@ -897,7 +890,7 @@ func AddOrUpdateVariable(cfg UpdateConfig) (string, error) {
 			return "", errors.New("addKeyIfNotFound was set to true but a variable already exists with key " + nextVar.Key)
 		}
 
-		tfVar := TFVar{Key: nextVar.Key, Value: cfg.NewValue, Hcl: false, Sensitive: cfg.SensitiveVariable}
+		tfVar := Var{Key: nextVar.Key, Value: cfg.NewValue, Hcl: false, Sensitive: cfg.SensitiveVariable}
 
 		if !config.readOnly {
 			UpdateVariable(cfg.Organization, cfg.Workspace, nextVar.ID, tfVar)
@@ -907,7 +900,7 @@ func AddOrUpdateVariable(cfg UpdateConfig) (string, error) {
 
 	// At this point, we haven't found a match
 	if cfg.AddKeyIfNotFound {
-		tfVar := TFVar{Key: cfg.SearchString, Value: cfg.NewValue, Hcl: false, Sensitive: cfg.SensitiveVariable}
+		tfVar := Var{Key: cfg.SearchString, Value: cfg.NewValue, Hcl: false, Sensitive: cfg.SensitiveVariable}
 
 		if !config.readOnly {
 			CreateVariable(cfg.Organization, cfg.Workspace, tfVar)

@@ -176,7 +176,6 @@ Usage:
 
 Flags:
   -a, --attribute string   required - Workspace attribute to update, use Terraform Cloud API workspace attribute names
-  -d, --dry-run-mode       dry run mode only. (e.g. "-d")
   -h, --help               help for update
   -v, --value string       required - Value
   -w, --workspace string   required - Partial workspace name to search across all workspaces

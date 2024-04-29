@@ -20,7 +20,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"io/ioutil"
+	"log"
 	"net/http"
 	"os"
 	"os/exec"
@@ -318,7 +318,10 @@ func OrganizationExists(organization string) (bool, error) {
 	}
 	u := NewTfcUrl("/organizations/" + organization)
 
-	resp := callAPI(http.MethodGet, u.String(), "", nil)
+	resp, err := callAPI(http.MethodGet, u.String(), "", nil)
+	if err != nil {
+		return false, err
+	}
 
 	defer resp.Body.Close()
 
@@ -350,14 +353,13 @@ func GetAllWorkspaces(organization string) ([]Workspace, error) {
 }
 
 func getWorkspacePage(url string) (WorkspaceList, error) {
-	resp := callAPI(http.MethodGet, url, "", nil)
-
+	resp, err := callAPI(http.MethodGet, url, "", nil)
+	if err != nil {
+		return WorkspaceList{}, err
+	}
 	defer resp.Body.Close()
-	// bodyBytes, _ := ioutil.ReadAll(resp.Body)
-	// fmt.Println(string(bodyBytes))
 
 	var nextWsData WorkspaceList
-
 	if err := json.NewDecoder(resp.Body).Decode(&nextWsData); err != nil {
 		return WorkspaceList{}, fmt.Errorf("json decode error: %s", err)
 	}
@@ -377,14 +379,13 @@ func GetWorkspaceData(organization, workspaceName string) (WorkspaceJSON, error)
 		workspaceName,
 	))
 
-	resp := callAPI(http.MethodGet, u.String(), "", nil)
-
+	resp, err := callAPI(http.MethodGet, u.String(), "", nil)
+	if err != nil {
+		return WorkspaceJSON{}, err
+	}
 	defer resp.Body.Close()
-	// bodyBytes, _ := ioutil.ReadAll(resp.Body)
-	// fmt.Println(string(bodyBytes))
 
 	var wsData WorkspaceJSON
-
 	if err := json.NewDecoder(resp.Body).Decode(&wsData); err != nil {
 		return WorkspaceJSON{}, fmt.Errorf("Error getting workspace data for %s:%s\n%s", organization, workspaceName, err.Error())
 	}
@@ -425,14 +426,13 @@ func GetVarsFromWorkspace(organization, workspaceName string) ([]Var, error) {
 	u.SetParam(paramFilterOrganizationName, organization)
 	u.SetParam(paramFilterWorkspaceName, workspaceName)
 
-	resp := callAPI(http.MethodGet, u.String(), "", nil)
-
+	resp, err := callAPI(http.MethodGet, u.String(), "", nil)
+	if err != nil {
+		return nil, err
+	}
 	defer resp.Body.Close()
-	// bodyBytes, _ := ioutil.ReadAll(resp.Body)
-	// fmt.Println(string(bodyBytes))
 
 	var varsResp VarsResponse
-
 	if err := json.NewDecoder(resp.Body).Decode(&varsResp); err != nil {
 		return nil, fmt.Errorf("Error getting variables for %s:%s ...\n%s", organization, workspaceName, err.Error())
 	}
@@ -450,7 +450,10 @@ func GetVarsFromWorkspace(organization, workspaceName string) ([]Var, error) {
 func DeleteVariable(variableID string) {
 	u := NewTfcUrl("/vars/" + variableID)
 
-	resp := callAPI(http.MethodDelete, u.String(), "", nil)
+	resp, err := callAPI(http.MethodDelete, u.String(), "", nil)
+	if err != nil {
+		log.Fatalln(err)
+	}
 	_ = resp.Body.Close()
 }
 
@@ -498,15 +501,16 @@ func SearchVariables(organization, wsName, keyContains, valueContains string) ([
 
 // GetTeamAccessFrom returns the team access data from an existing workspace
 func GetTeamAccessFrom(workspaceID string) (AllTeamWorkspaceData, error) {
-	u := NewTfcUrl(fmt.Sprintf("/team-workspaces"))
+	u := NewTfcUrl("/team-workspaces")
 	u.SetParam(paramFilterWorkspaceID, workspaceID)
 
-	resp := callAPI(http.MethodGet, u.String(), "", nil)
-
+	resp, err := callAPI(http.MethodGet, u.String(), "", nil)
+	if err != nil {
+		return AllTeamWorkspaceData{}, err
+	}
 	defer resp.Body.Close()
 
 	var allTeamData AllTeamWorkspaceData
-
 	if err := json.NewDecoder(resp.Body).Decode(&allTeamData); err != nil {
 		return AllTeamWorkspaceData{}, fmt.Errorf("Error getting team workspace data for %s\n%s", workspaceID, err.Error())
 	}
@@ -552,10 +556,12 @@ func AssignTeamAccess(workspaceID string, allTeamData AllTeamWorkspaceData) {
 			teamData.Relationships.Team.Data.ID,
 		)
 
-		resp := callAPI(http.MethodPost, url, postData, nil)
+		resp, err := callAPI(http.MethodPost, url, postData, nil)
+		if err != nil {
+			log.Fatalln(err)
+		}
 		defer resp.Body.Close()
 	}
-	return
 }
 
 // CreateVariable makes a Terraform vars API POST to create a variable
@@ -567,12 +573,11 @@ func CreateVariable(organization, workspaceName string, tfVar TFVar) {
 
 	postData := GetCreateVariablePayload(organization, workspaceName, tfVar)
 
-	resp := callAPI(http.MethodPost, url, postData, nil)
-
+	resp, err := callAPI(http.MethodPost, url, postData, nil)
+	if err != nil {
+		log.Fatalln(err)
+	}
 	defer resp.Body.Close()
-	// bodyBytes, _ := ioutil.ReadAll(resp.Body)
-	// fmt.Println(string(bodyBytes))
-	return
 }
 
 // CreateAllVariables makes several Terraform vars API POSTs to create
@@ -613,12 +618,12 @@ func UpdateVariable(organization, workspaceName, variableID string, tfVar TFVar)
 
 	patchData := GetUpdateVariablePayload(organization, workspaceName, variableID, tfVar)
 
-	resp := callAPI(http.MethodPatch, url, patchData, nil)
+	resp, err := callAPI(http.MethodPatch, url, patchData, nil)
+	if err != nil {
+		log.Fatalln(err)
+	}
 
 	defer resp.Body.Close()
-	// bodyBytes, _ := ioutil.ReadAll(resp.Body)
-	// fmt.Println(string(bodyBytes))
-	return
 }
 
 // CreateWorkspace makes a Terraform workspaces API call to create a
@@ -631,14 +636,13 @@ func CreateWorkspace(oc OpsConfig, vcsTokenID string) (string, error) {
 
 	postData := GetCreateWorkspacePayload(oc, vcsTokenID)
 
-	resp := callAPI(http.MethodPost, url, postData, nil)
-
+	resp, err := callAPI(http.MethodPost, url, postData, nil)
+	if err != nil {
+		return "", err
+	}
 	defer resp.Body.Close()
-	// bodyBytes, _ := ioutil.ReadAll(resp.Body)
-	// fmt.Println(string(bodyBytes))
 
 	var wsData WorkspaceJSON
-
 	if err := json.NewDecoder(resp.Body).Decode(&wsData); err != nil {
 		return "", fmt.Errorf("error getting created workspace data: %s\n", err)
 	}
@@ -655,14 +659,13 @@ func CreateWorkspace2(oc OpsConfig, vcsTokenID string) (Workspace, error) {
 
 	postData := GetCreateWorkspacePayload(oc, vcsTokenID)
 
-	resp := callAPI(http.MethodPost, url, postData, nil)
-
+	resp, err := callAPI(http.MethodPost, url, postData, nil)
+	if err != nil {
+		return Workspace{}, err
+	}
 	defer resp.Body.Close()
-	// bodyBytes, _ := ioutil.ReadAll(resp.Body)
-	// fmt.Println(string(bodyBytes))
 
 	var wsData WorkspaceJSON
-
 	if err := json.NewDecoder(resp.Body).Decode(&wsData); err != nil {
 		return Workspace{}, fmt.Errorf("error getting created workspace data: %s\n", err)
 	}
@@ -943,20 +946,18 @@ type OAuthTokens struct {
 
 func getVCSToken(vcsUsername, orgName string) (string, error) {
 	url := fmt.Sprintf(baseURL+"/organizations/%s/oauth-tokens", orgName)
-	resp := callAPI(http.MethodGet, url, "", nil)
-
+	resp, err := callAPI(http.MethodGet, url, "", nil)
+	if err != nil {
+		return "", err
+	}
 	defer resp.Body.Close()
-	// bodyBytes, _ := ioutil.ReadAll(resp.Body)
-	// fmt.Println(string(bodyBytes))
 
 	var oauthTokens OAuthTokens
-
 	if err := json.NewDecoder(resp.Body).Decode(&oauthTokens); err != nil {
 		return "", err
 	}
 
 	vcsTokenID := ""
-
 	for _, nextToken := range oauthTokens.Data {
 		if nextToken.Attributes.ServiceProviderUser == vcsUsername {
 			vcsTokenID = nextToken.ID
@@ -1010,9 +1011,13 @@ func UpdateWorkspace(params WorkspaceUpdateParams) error {
 	}
 	for id, name := range foundWs {
 		url := fmt.Sprintf(baseURL+"/workspaces/%s", id)
-		resp := callAPI(http.MethodPatch, url, postData, nil)
-		bodyBytes, _ := ioutil.ReadAll(resp.Body)
-		_ = resp.Body.Close()
+		resp, err := callAPI(http.MethodPatch, url, postData, nil)
+		if err != nil {
+			return err
+		}
+
+		bodyBytes, _ := io.ReadAll(resp.Body)
+		defer resp.Body.Close()
 
 		fmt.Printf("set '%s' to '%s' on workspace %s\n", params.Attribute, params.Value, name)
 		if config.debug {
@@ -1059,7 +1064,10 @@ func FindWorkspaces(organization, workspaceFilter string) map[string]string {
 	var attributeData [][]string
 	for page := 1; ; page++ {
 		u.SetParam(paramPageNumber, strconv.Itoa(page))
-		resp := callAPI(http.MethodGet, u.String(), "", nil)
+		resp, err := callAPI(http.MethodGet, u.String(), "", nil)
+		if err != nil {
+			log.Fatalln(err)
+		}
 		ws := parseWorkspacePage(resp, []string{"id", "name"})
 		attributeData = append(attributeData, ws...)
 		if len(ws) < pageSize {
@@ -1083,7 +1091,11 @@ func GetWorkspaceAttributes(organization string, attributes []string) ([][]strin
 	var attributeData [][]string
 	for page := 1; ; page++ {
 		u.SetParam(paramPageNumber, strconv.Itoa(page))
-		resp := callAPI(http.MethodGet, u.String(), "", nil)
+		resp, err := callAPI(http.MethodGet, u.String(), "", nil)
+		if err != nil {
+			log.Fatalln(err)
+		}
+
 		ws := parseWorkspacePage(resp, attributes)
 		attributeData = append(attributeData, ws...)
 		if len(ws) < pageSize {
@@ -1125,7 +1137,10 @@ func parseWorkspacePage(resp *http.Response, attributes []string) [][]string {
 func GetWorkspaceByName(organizationName, workspaceName string) (Workspace, error) {
 	u := NewTfcUrl(fmt.Sprintf("/organizations/%s/workspaces/%s", organizationName, workspaceName))
 
-	resp := callAPI(http.MethodGet, u.String(), "", nil)
+	resp, err := callAPI(http.MethodGet, u.String(), "", nil)
+	if err != nil {
+		return Workspace{}, err
+	}
 
 	var ws WorkspaceJSON
 	if err := json.NewDecoder(resp.Body).Decode(&ws); err != nil {
@@ -1196,11 +1211,14 @@ type VariableSetList struct {
 func GetAllVariableSets(organizationName string) (VariableSetList, error) {
 	u := NewTfcUrl(fmt.Sprintf("/organizations/%s/varsets", organizationName))
 
-	resp := callAPI(http.MethodGet, u.String(), "", nil)
+	resp, err := callAPI(http.MethodGet, u.String(), "", nil)
+	if err != nil {
+		return VariableSetList{}, err
+	}
 
 	var variableSetList VariableSetList
 	if err := json.NewDecoder(resp.Body).Decode(&variableSetList); err != nil {
-		return variableSetList, fmt.Errorf("unexpected content retrieving variable set list: %w", err)
+		return VariableSetList{}, fmt.Errorf("unexpected content retrieving variable set list: %w", err)
 	}
 
 	return variableSetList, nil
@@ -1230,9 +1248,9 @@ func ApplyVariableSet(varsetID string, workspaceIDs []string) error {
 	if config.readOnly {
 		return nil
 	}
-	_ = callAPI(http.MethodPost, u.String(), postData, nil)
+	_, err = callAPI(http.MethodPost, u.String(), postData, nil)
 	// TODO: need to look at response?
-	return nil
+	return err
 }
 
 func copyVariableSetList(sourceWorkspaceID, destinationWorkspaceID string) error {
@@ -1267,7 +1285,10 @@ func ApplyVariableSetsToWorkspace(sets VariableSetList, workspaceID string) erro
 func ListWorkspaceVariableSets(workspaceID string) (VariableSetList, error) {
 	u := NewTfcUrl(fmt.Sprintf("/workspaces/%s/varsets", workspaceID))
 
-	resp := callAPI(http.MethodGet, u.String(), "", nil)
+	resp, err := callAPI(http.MethodGet, u.String(), "", nil)
+	if err != nil {
+		return VariableSetList{}, err
+	}
 
 	var variableSetList VariableSetList
 	if err := json.NewDecoder(resp.Body).Decode(&variableSetList); err != nil {
@@ -1295,7 +1316,6 @@ func AddRemoteStateConsumers(workspaceID string, consumerIDs []string) error {
 	}
 	postData := data.String()
 
-	_ = callAPI(http.MethodPost, u.String(), postData, nil)
-
-	return nil
+	_, err = callAPI(http.MethodPost, u.String(), postData, nil)
+	return err
 }

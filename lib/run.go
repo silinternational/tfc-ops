@@ -16,8 +16,8 @@ type RunConfig struct {
 func CreateRun(config RunConfig) error {
 	u := NewTfcUrl("/runs")
 	payload := buildRunPayload(config.Message, config.WorkspaceID)
-	_ = callAPI(http.MethodPost, u.String(), payload, nil)
-	return nil
+	_, err := callAPI(http.MethodPost, u.String(), payload, nil)
+	return err
 }
 
 func buildRunPayload(message, workspaceID string) string {

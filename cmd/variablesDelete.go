@@ -56,22 +56,27 @@ func runVariablesDelete() {
 	if !found {
 		errLog.Fatalf("Variable %s not found in workspace %s\n", key, workspace)
 	}
-	return
 }
 
 func deleteWorkspaceVar(org, ws, key string) bool {
-	v, err := lib.GetWorkspaceVar(org, ws, key)
+	workspace, err := lib.GetWorkspaceByName(org, ws)
 	if err != nil {
 		println(err.Error())
 		return false
 	}
-	if v == nil {
-		return false
-	}
 
-	fmt.Printf("Deleting variable %s from workspace %s\n", v.Key, ws)
-	if !readOnlyMode {
-		lib.DeleteVariable(v.ID)
+	for _, v := range workspace.Variables {
+		if v.Key == key {
+			fmt.Printf("Deleting variable %s from workspace %s\n", v.Key, ws)
+
+			if !readOnlyMode {
+				if err := lib.DeleteVariable(workspace.ID, v.ID); err != nil {
+					println(err.Error())
+				}
+			}
+
+			return err == nil
+		}
 	}
-	return true
+	return false
 }

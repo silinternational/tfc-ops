@@ -3,7 +3,6 @@ package cmd
 import (
 	"fmt"
 	"os"
-	"strings"
 
 	"github.com/manifoldco/promptui"
 	"github.com/spf13/cobra"
@@ -130,23 +129,18 @@ func runVariablesUpdate(cfg lib.UpdateConfig) {
 
 func runVariablesUpdateAll(cfg lib.UpdateConfig) {
 	allData, err := lib.GetAllWorkspaces(organization)
+	if err != nil {
+		fmt.Println(err.Error())
+		return
+	}
+
 	for _, ws := range allData {
-		value, err := ws.AttributeByLabel(strings.Trim("name", " "))
+		value := ws.Name
 		fmt.Printf("Do you want to update the variable %s across the workspace: %s\n\n", variableSearchString, value)
 		if awaitUserResponse() {
 			cfg.Workspace = value
 			runVariablesUpdate(cfg)
-
-			if err != nil {
-				fmt.Println("\n", err.Error())
-				return
-			}
 		}
-	}
-
-	if err != nil {
-		fmt.Println(err.Error())
-		return
 	}
 }
 

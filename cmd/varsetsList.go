@@ -17,6 +17,7 @@ package cmd
 import (
 	"fmt"
 
+	"github.com/hashicorp/go-tfe"
 	"github.com/spf13/cobra"
 
 	"github.com/silinternational/tfc-ops/v3/lib"
@@ -47,28 +48,32 @@ func runVarsetsList() {
 		errLog.Fatalln("Either --workspace or --workspace-filter must be specified.")
 	}
 
-	var workspaces map[string]string
+	var err error
+	var workspaces []*tfe.Workspace
 	if workspace != "" {
 		w, err := lib.GetWorkspaceByName(organization, workspace)
 		if err != nil {
 			errLog.Fatalf("error getting workspace %q from Terraform: %s", workspace, err)
 		}
-		workspaces = map[string]string{w.ID: workspace}
+		workspaces = append(workspaces, w)
 	} else {
-		workspaces = lib.FindWorkspaces(organization, workspaceFilter)
+		workspaces, err = lib.FindWorkspaces(organization, workspaceFilter)
+		if err != nil {
+			errLog.Fatalf(err.Error())
+		}
 		if len(workspaces) == 0 {
 			errLog.Fatalf("no workspaces match the filter '%s'", workspaceFilter)
 		}
 	}
 
-	for id, name := range workspaces {
-		sets, err := lib.ListWorkspaceVariableSets(id)
+	for _, w := range workspaces {
+		sets, err := lib.GetWorkspaceVariableSets(w.ID)
 		if err != nil {
-			return
+			errLog.Fatalf(err.Error())
 		}
-		fmt.Printf("Workspace %s has the following variable sets:\n", name)
-		for _, set := range sets.Data {
-			fmt.Printf("  %s\n", set.Attributes.Name)
+		fmt.Printf("Workspace %s has the following variable sets:\n", w.Name)
+		for _, set := range sets {
+			fmt.Printf("  %s\n", set.Name)
 		}
 	}
 }

@@ -150,7 +150,7 @@ func runClone(cfg cloner.CloneConfig) {
 		cfg.Organization, cfg.SourceWorkspace, cfg.NewWorkspace, cfg.CopyState, cfg.CopyVariables,
 		cfg.ApplyVariableSets, cfg.DifferentDestinationAccount)
 
-	sensitiveVars, err := cloner.CloneWorkspace(cfg)
+	_, sensitiveVars, err := cloner.CloneWorkspace(cfg)
 	if err != nil {
 		fmt.Println(err.Error())
 		return

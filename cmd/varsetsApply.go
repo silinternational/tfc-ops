@@ -17,6 +17,7 @@ package cmd
 import (
 	"fmt"
 
+	"github.com/hashicorp/go-tfe"
 	"github.com/spf13/cobra"
 
 	"github.com/silinternational/tfc-ops/v3/lib"
@@ -57,25 +58,28 @@ func runVarsetsApply(name string) {
 		errLog.Fatalln("Either --workspace or --workspace-filter must be specified.")
 	}
 
-	var workspaceNames map[string]string
+	var err error
+	var workspaces []*tfe.Workspace
 	if workspace != "" {
 		w, err := lib.GetWorkspaceByName(organization, workspace)
 		if err != nil {
 			errLog.Fatalf("error getting workspace from Terraform: %s", err)
 		}
-		workspaceNames = map[string]string{w.ID: workspace}
+		workspaces = append(workspaces, w)
 	} else {
-		workspaceNames = lib.FindWorkspaces(organization, workspaceFilter)
-		if len(workspaceNames) == 0 {
+		workspaces, err = lib.FindWorkspaces(organization, workspaceFilter)
+		if err != nil {
+			errLog.Fatalf(err.Error())
+		}
+		if len(workspaces) == 0 {
 			errLog.Fatalf("no workspaces match the filter '%s'", workspaceFilter)
 		}
 	}
 
-	_ = applyVariableSet(organization, name, workspaceNames)
-	return
+	_ = applyVariableSet(organization, name, workspaces)
 }
 
-func applyVariableSet(org, vsName string, workspaceNames map[string]string) bool {
+func applyVariableSet(org, vsName string, workspaces []*tfe.Workspace) bool {
 	vs, err := lib.GetVariableSet(org, vsName)
 	if err != nil {
 		errLog.Fatalf("Error retrieving variable set: %s", err)
@@ -84,10 +88,8 @@ func applyVariableSet(org, vsName string, workspaceNames map[string]string) bool
 		errLog.Fatalf("No variable set matches the name given (%s)", vsName)
 	}
 
-	wsIDs, wsNames := stringMapToSlice(workspaceNames)
-
-	fmt.Printf("Applying variable set '%s' to %s\n", vs.Attributes.Name, workspaceListToString(wsNames))
-	if err = lib.ApplyVariableSet(vs.ID, wsIDs); err != nil {
+	fmt.Printf("Applying variable set '%s' to %s\n", vs.Name, lib.WorkspaceListToString(workspaces))
+	if err = lib.ApplyVariableSet(vs.ID, workspaces); err != nil {
 		errLog.Fatalf("Error while applying variable set: %s", err)
 	}
 	return true

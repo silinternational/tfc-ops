@@ -18,7 +18,6 @@ import (
 	"fmt"
 	"log"
 	"os"
-	"strings"
 
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
@@ -74,6 +73,10 @@ func initRoot(cmd *cobra.Command, args []string) {
 	if readOnlyMode {
 		lib.EnableReadOnlyMode()
 	}
+
+	if err := lib.NewClient(""); err != nil {
+		errLog.Fatalln(err)
+	}
 }
 
 // initConfig reads in config file and ENV variables if set.
@@ -109,31 +112,4 @@ func addGlobalFlags(command *cobra.Command) {
 	if err := command.MarkPersistentFlagRequired("organization"); err != nil {
 		panic("MarkPersistentFlagRequired failed with error " + err.Error())
 	}
-}
-
-func stringMapToSlice(m map[string]string) ([]string, []string) {
-	keys := make([]string, len(m))
-	values := make([]string, len(m))
-	i := 0
-	for k, v := range m {
-		keys[i] = k
-		values[i] = v
-		i++
-	}
-	return keys, values
-}
-
-func workspaceListToString(wsNames []string) string {
-	if len(wsNames) == 0 {
-		return ""
-	}
-
-	s := ""
-	if len(wsNames) > 1 {
-		s = "workspaces: " + strings.Join(wsNames, ", ")
-	} else {
-		s = "workspace '" + wsNames[0] + "'"
-	}
-
-	return s
 }

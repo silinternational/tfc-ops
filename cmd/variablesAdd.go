@@ -64,9 +64,8 @@ func runVariablesAdd() {
 	}
 
 	for _, w := range allWorkspaces {
-		addWorkspaceVar(organization, w.Attributes.Name, key, value)
+		addWorkspaceVar(organization, w.Name, key, value)
 	}
-	return
 }
 
 func addWorkspaceVar(org, ws, key, value string) {
@@ -90,5 +89,4 @@ func addWorkspaceVar(org, ws, key, value string) {
 			errLog.Fatalf("failed to add variable '%s' in workspace '%s', %s\n", key, ws, err)
 		}
 	}
-	return
 }

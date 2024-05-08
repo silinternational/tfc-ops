@@ -20,6 +20,7 @@ import (
 	"strings"
 	"text/tabwriter"
 
+	"github.com/hashicorp/go-tfe"
 	"github.com/spf13/cobra"
 
 	api "github.com/silinternational/tfc-ops/v3/lib"
@@ -92,13 +93,7 @@ func runVariablesList() {
 		printWorkspaceVars(workspace, vars)
 		return
 	}
-	allData, err := api.GetAllWorkspaces(organization)
-	if err != nil {
-		println(err.Error())
-		return
-	}
-
-	wsVars, err := api.SearchVarsInAllWorkspaces(allData, organization, keyContains, valueContains)
+	wsVars, err := api.SearchVarsInAllWorkspaces(organization, keyContains, valueContains)
 	if err != nil {
 		println(err.Error())
 		return
@@ -108,10 +103,9 @@ func runVariablesList() {
 		printWorkspaceVars(ws, vs)
 	}
 	println()
-	return
 }
 
-func printWorkspaceVars(ws string, vs []api.Var) {
+func printWorkspaceVars(ws string, vs []*tfe.Variable) {
 	if len(vs) == 0 {
 		return
 	}
@@ -134,7 +128,7 @@ func printWorkspaceVars(ws string, vs []api.Var) {
 	w.Flush()
 }
 
-func printWorkspaceVarsCSV(ws string, vs []api.Var) {
+func printWorkspaceVarsCSV(ws string, vs []*tfe.Variable) {
 	for _, v := range vs {
 		val := v.Value
 		if v.Sensitive {

@@ -58,7 +58,7 @@ func addConsumersCommand(parentCommand *cobra.Command) {
 }
 
 func runWorkspaceConsumers(consumers string) {
-	workspaceData, err := lib.GetWorkspaceData(organization, workspace)
+	workspaceData, err := lib.GetWorkspaceByName(organization, workspace)
 	if err != nil {
 		log.Fatalln("workspace consumers", err)
 	}
@@ -66,16 +66,16 @@ func runWorkspaceConsumers(consumers string) {
 	consumersList := strings.Split(consumers, ",")
 	consumerIDs := make([]string, len(consumersList))
 	for i, consumer := range consumersList {
-		consumerData, err := lib.GetWorkspaceData(organization, consumer)
+		consumerData, err := lib.GetWorkspaceByName(organization, consumer)
 		if err != nil {
 			log.Fatalln("workspace consumers", err)
 		}
-		consumerIDs[i] = consumerData.Data.ID
+		consumerIDs[i] = consumerData.ID
 	}
 
 	fmt.Printf("Adding to %s: %s", workspace, consumers)
 	if !readOnlyMode {
-		if err := lib.AddRemoteStateConsumers(workspaceData.Data.ID, consumerIDs); err != nil {
+		if err := lib.AddRemoteStateConsumers(workspaceData.ID, consumerIDs); err != nil {
 			log.Fatalln("workspace consumers", err)
 		}
 	}

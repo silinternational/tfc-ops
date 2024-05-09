@@ -1,4 +1,4 @@
-// Copyright © 2023 SIL International
+// Copyright © 2018-2024 SIL International
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -19,8 +19,6 @@ import (
 
 	"github.com/hashicorp/go-tfe"
 	"github.com/spf13/cobra"
-
-	"github.com/silinternational/tfc-ops/v3/lib"
 )
 
 var varsetsListCmd = &cobra.Command{
@@ -28,9 +26,7 @@ var varsetsListCmd = &cobra.Command{
 	Short: "List Variable Sets",
 	Long:  `List variable sets applied to a workspace`,
 	Args:  cobra.ExactArgs(0),
-	Run: func(cmd *cobra.Command, args []string) {
-		runVarsetsList()
-	},
+	Run:   runVarsetsList,
 }
 
 func init() {
@@ -38,41 +34,33 @@ func init() {
 
 	varsetsListCmd.Flags().StringVarP(&workspace, "workspace", "w", "",
 		"Name of the Workspace in Terraform Cloud")
-
 	varsetsListCmd.Flags().StringVar(&workspaceFilter, "workspace-filter", "",
 		"Partial workspace name to search across all workspaces")
+
+	varsetsApplyCmd.MarkFlagsOneRequired("workspace", "workspace-filter")
 }
 
-func runVarsetsList() {
-	if workspace == "" && workspaceFilter == "" {
-		errLog.Fatalln("Either --workspace or --workspace-filter must be specified.")
-	}
-
-	var err error
-	var workspaces []*tfe.Workspace
+func runVarsetsList(cmd *cobra.Command, args []string) {
+	var ws []*tfe.Workspace
 	if workspace != "" {
-		w, err := lib.GetWorkspaceByName(organization, workspace)
-		if err != nil {
-			errLog.Fatalf("error getting workspace %q from Terraform: %s", workspace, err)
-		}
-		workspaces = append(workspaces, w)
+		w, err := client.Workspaces.Read(ctx, organization, workspace)
+		cobra.CheckErr(err)
+
+		ws = append(ws, w)
 	} else {
-		workspaces, err = lib.FindWorkspaces(organization, workspaceFilter)
-		if err != nil {
-			errLog.Fatalf(err.Error())
-		}
-		if len(workspaces) == 0 {
-			errLog.Fatalf("no workspaces match the filter '%s'", workspaceFilter)
-		}
+		var err error
+		list, err := client.Workspaces.List(ctx, organization, &tfe.WorkspaceListOptions{Search: workspaceFilter})
+		cobra.CheckErr(err)
+
+		ws = list.Items
 	}
 
-	for _, w := range workspaces {
-		sets, err := lib.GetWorkspaceVariableSets(w.ID)
-		if err != nil {
-			errLog.Fatalf(err.Error())
-		}
+	for _, w := range ws {
+		list, err := client.VariableSets.ListForWorkspace(ctx, w.ID, nil)
+		cobra.CheckErr(err)
+
 		fmt.Printf("Workspace %s has the following variable sets:\n", w.Name)
-		for _, set := range sets {
+		for _, set := range list.Items {
 			fmt.Printf("  %s\n", set.Name)
 		}
 	}

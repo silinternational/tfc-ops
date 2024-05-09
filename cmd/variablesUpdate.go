@@ -1,13 +1,26 @@
+// Copyright © 2018-2024 SIL International
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
 package cmd
 
 import (
 	"fmt"
-	"os"
+	"strings"
 
+	"github.com/hashicorp/go-tfe"
 	"github.com/manifoldco/promptui"
 	"github.com/spf13/cobra"
-
-	"github.com/silinternational/tfc-ops/v3/lib"
 )
 
 var (
@@ -20,128 +33,101 @@ var (
 )
 
 // cloneCmd represents the clone command
-var updateCmd = &cobra.Command{
+var variablesUpdateCmd = &cobra.Command{
 	Use:   "update",
 	Short: "Update/add a variable in a Workspace",
 	Long:  `Update or add a variable in a Terraform Cloud Workspace based on a complete case-insensitive match`,
 	Args:  cobra.ExactArgs(0),
-	Run: func(cmd *cobra.Command, args []string) {
-		if addKeyIfNotFound && searchOnVariableValue {
-			fmt.Println("Error: The 'add-key-if-not-found' flag may not be used with the 'search-on-variable-value' flag")
-			os.Exit(1)
-		}
-		config := lib.UpdateConfig{
-			Organization:          organization,
-			Workspace:             workspace,
-			SearchString:          variableSearchString,
-			NewValue:              newVariableValue,
-			SearchOnVariableValue: searchOnVariableValue,
-			AddKeyIfNotFound:      addKeyIfNotFound,
-			SensitiveVariable:     sensitiveVariable,
-		}
-		if workspace == "" {
-			runVariablesUpdateAll(config)
-		} else {
-			runVariablesUpdate(config)
-		}
-	},
+	Run:   runVariablesUpdate,
 }
 
 func init() {
-	variablesCmd.AddCommand(updateCmd)
-	updateCmd.Flags().StringVarP(
-		&variableSearchString,
-		"variable-search-string",
-		"s",
-		"",
-		requiredPrefix+`The string to match in the current variables (either in the Key or Value - see other flags)`,
-	)
-	updateCmd.Flags().StringVarP(
-		&newVariableValue,
-		"new-variable-value",
-		"n",
-		"",
-		requiredPrefix+`The desired new value of the variable`,
-	)
-	updateCmd.Flags().BoolVarP(
-		&addKeyIfNotFound,
-		"add-key-if-not-found",
-		"a",
-		false,
-		`optional (e.g. "-a=true") whether to add a new variable if a matching key is not found.`,
-	)
-	updateCmd.Flags().BoolVarP(
-		&searchOnVariableValue,
-		"search-on-variable-value",
-		"v",
-		false,
-		`optional (e.g. "-v=true") whether to do the search based on the value of the variables. (Must be false if add-key-if-not-found is true`,
-	)
-	updateCmd.Flags().BoolVarP(
-		&readOnlyMode,
-		"dry-run-mode",
-		"d",
-		false,
-		`optional (e.g. "-d=true") dry run mode only.`,
-	)
-	if err := updateCmd.Flags().MarkDeprecated("dry-run-mode", "use -r for read-only-mode"); err != nil {
-		errLog.Fatalln(err)
-	}
-	updateCmd.Flags().BoolVarP(
-		&sensitiveVariable,
-		"sensitive-variable",
-		"x",
-		false,
-		`optional (e.g. "-x=true") make the variable sensitive.`,
-	)
-	if err := updateCmd.MarkFlagRequired("variable-search-string"); err != nil {
-		errLog.Fatalln(err)
-	}
-	if err := updateCmd.MarkFlagRequired("new-variable-value"); err != nil {
-		errLog.Fatalln(err)
-	}
+	variablesCmd.AddCommand(variablesUpdateCmd)
+	variablesUpdateCmd.Flags().StringVarP(&variableSearchString, "variable-search-string", "s", "",
+		requiredPrefix+`The string to match in the current variables (either in the Key or Value - see other flags)`)
+	variablesUpdateCmd.Flags().StringVarP(&newVariableValue, "new-variable-value", "n", "",
+		requiredPrefix+`The desired new value of the variable`)
+	variablesUpdateCmd.Flags().BoolVarP(&addKeyIfNotFound, "add-key-if-not-found", "a", false,
+		`optional (e.g. "-a=true") whether to add a new variable if a matching key is not found.`)
+	variablesUpdateCmd.Flags().BoolVarP(&searchOnVariableValue, "search-on-variable-value", "v", false,
+		`optional (e.g. "-v=true") whether to do the search based on the value of the variables. (Must be false if add-key-if-not-found is true`)
+	variablesUpdateCmd.Flags().BoolVarP(&sensitiveVariable, "sensitive-variable", "x", false,
+		`optional (e.g. "-x=true") make the variable sensitive.`)
+
+	cobra.CheckErr(variablesUpdateCmd.MarkFlagRequired("variable-search-string"))
+	cobra.CheckErr(variablesUpdateCmd.MarkFlagRequired("new-variable-value"))
+	variablesUpdateCmd.MarkFlagsMutuallyExclusive("add-key-if-not-found", "search-on-variable-value")
 }
 
-func runVariablesUpdate(cfg lib.UpdateConfig) {
-	if cfg.AddKeyIfNotFound {
-		if cfg.SearchOnVariableValue {
-			println("update variable aborted. Because addKeyIfNotFound was true, searchOnVariableValue must be set to false")
-			return
-		}
-		cfg.SearchOnVariableValue = false
-	}
-
-	if readOnlyMode {
-		println("\n ****  READ ONLY MODE  ****")
-	}
+func runVariablesUpdate(cmd *cobra.Command, args []string) {
 	fmt.Printf("update variable called using %s, %s, search string: %s, new value: %s, add-key-if-not-found: %t, search-on-variable-value: %t\n",
-		cfg.Organization, cfg.Workspace, cfg.SearchString, cfg.NewValue, cfg.AddKeyIfNotFound, cfg.SearchOnVariableValue)
+		organization, workspace, variableSearchString, newVariableValue, addKeyIfNotFound, searchOnVariableValue)
 
-	message, err := lib.AddOrUpdateVariable(cfg)
-	if err != nil {
-		fmt.Println(err.Error())
-		return
+	var ws []*tfe.Workspace
+	if workspace != "" {
+		w, err := client.Workspaces.Read(ctx, organization, workspace)
+		cobra.CheckErr(err)
+
+		ws = append(ws, w)
+	} else {
+		var err error
+		list, err := client.Workspaces.List(ctx, organization, nil)
+		cobra.CheckErr(err)
+
+		ws = list.Items
 	}
 
-	println("\n  **** Completed Updating ****")
-	println(message)
+	for _, w := range ws {
+		if len(ws) > 1 {
+			fmt.Printf("Do you want to update the variable %s across the workspace: %s\n\n", variableSearchString, w.Name)
+			if !awaitUserResponse() {
+				continue
+			}
+		}
+
+		addOrUpdateVariable(w, variableSearchString, searchOnVariableValue, addKeyIfNotFound, newVariableValue, sensitiveVariable)
+	}
 }
 
-func runVariablesUpdateAll(cfg lib.UpdateConfig) {
-	allData, err := lib.GetAllWorkspaces(organization)
-	if err != nil {
-		fmt.Println(err.Error())
+// addOrUpdateVariable adds or updates an existing Terraform Cloud workspace variable
+// If the copyVariables param is set to true, then all the non-sensitive variable values will be added to the new
+// workspace.  Otherwise, they will be set to "REPLACE_THIS_VALUE"
+func addOrUpdateVariable(w *tfe.Workspace, search string, searchValue, addKeyIfNotFound bool, value string, sensitive bool) {
+	for _, v := range w.Variables {
+		oldValue := v.Value
+
+		if (searchValue && !strings.EqualFold(v.Value, search)) ||
+			(!searchValue && !strings.EqualFold(v.Key, search)) {
+			continue
+		}
+
+		if !readOnlyMode {
+			_, err := client.Variables.Update(ctx, w.ID, v.ID, tfe.VariableUpdateOptions{
+				Value:     &newVariableValue,
+				Sensitive: &sensitive,
+			})
+			cobra.CheckErr(err)
+		}
+		fmt.Printf("Replaced the value of %s from %s to %s\n", v.Key, oldValue, value)
 		return
 	}
 
-	for _, ws := range allData {
-		value := ws.Name
-		fmt.Printf("Do you want to update the variable %s across the workspace: %s\n\n", variableSearchString, value)
-		if awaitUserResponse() {
-			cfg.Workspace = value
-			runVariablesUpdate(cfg)
+	if addKeyIfNotFound {
+		if !readOnlyMode {
+			cat := tfe.CategoryTerraform
+			_, err := client.Variables.Create(ctx, w.ID, tfe.VariableCreateOptions{
+				Key:       &search,
+				Value:     &value,
+				Category:  &cat,
+				Sensitive: &sensitive,
+			})
+			cobra.CheckErr(err)
 		}
+		fmt.Printf("Added variable %s = %s\n", search, value)
+		return
 	}
+
+	fmt.Println("No match found and no variable added")
 }
 
 func awaitUserResponse() bool {
@@ -150,8 +136,7 @@ func awaitUserResponse() bool {
 		Items: []string{"No", "Yes"},
 	}
 	_, result, err := prompt.Run()
-	if err != nil {
-		errLog.Fatalf("Prompt failed %v\n", err)
-	}
+	cobra.CheckErr(err)
+
 	return result == "Yes"
 }

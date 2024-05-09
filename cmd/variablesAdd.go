@@ -1,4 +1,4 @@
-// Copyright © 2018-2022 SIL International
+// Copyright © 2018-2024 SIL International
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -17,9 +17,8 @@ package cmd
 import (
 	"fmt"
 
+	"github.com/hashicorp/go-tfe"
 	"github.com/spf13/cobra"
-
-	"github.com/silinternational/tfc-ops/v3/lib"
 )
 
 var variablesAddCmd = &cobra.Command{
@@ -27,66 +26,52 @@ var variablesAddCmd = &cobra.Command{
 	Short: "Add new variable (if not already present)",
 	Long:  `Add variable in matching workspace. Will not update existing variable.`,
 	Args:  cobra.ExactArgs(0),
-	Run: func(cmd *cobra.Command, args []string) {
-		runVariablesAdd()
-	},
+	Run:   runVariablesAdd,
 }
 
 func init() {
 	variablesCmd.AddCommand(variablesAddCmd)
 	variablesAddCmd.Flags().StringVarP(&key, "key", "k", "",
 		requiredPrefix+"Terraform variable key")
-	if err := variablesAddCmd.MarkFlagRequired("key"); err != nil {
-		errLog.Fatalln("failed to mark 'key' as a required flag on variablesAddCmd")
-	}
 	variablesAddCmd.Flags().StringVarP(&value, "value", "v", "",
 		requiredPrefix+"Terraform variable value")
-	if err := variablesAddCmd.MarkFlagRequired("value"); err != nil {
-		errLog.Fatalln("failed to mark 'value' as a required flag on variablesAddCmd")
-	}
+
+	cobra.CheckErr(variablesAddCmd.MarkFlagRequired("key"))
+	cobra.CheckErr(variablesAddCmd.MarkFlagRequired("value"))
 }
 
-func runVariablesAdd() {
-	if readOnlyMode {
-		fmt.Println("Read only mode enabled. No variables will be added.")
-	}
-
+func runVariablesAdd(cmd *cobra.Command, args []string) {
+	var ws []*tfe.Workspace
 	if workspace != "" {
-		addWorkspaceVar(organization, workspace, key, value)
-		return
-	}
+		w, err := client.Workspaces.Read(ctx, organization, workspace)
+		cobra.CheckErr(err)
 
-	fmt.Printf("Adding variables with key '%s' and value '%s' to all workspaces...\n", key, value)
-	allWorkspaces, err := lib.GetAllWorkspaces(organization)
-	if err != nil {
-		println(err.Error())
-		return
-	}
+		ws = append(ws, w)
+	} else {
+		var err error
+		list, err := client.Workspaces.List(ctx, organization, nil)
+		cobra.CheckErr(err)
 
-	for _, w := range allWorkspaces {
-		addWorkspaceVar(organization, w.Name, key, value)
+		workspace = "all workspaces"
+		ws = list.Items
 	}
-}
+	fmt.Printf("Adding variables with key '%s' and value '%s' to %s...\n", key, value, workspace)
 
-func addWorkspaceVar(org, ws, key, value string) {
-	if v, err := lib.GetWorkspaceVar(org, ws, key); err != nil {
-		errLog.Fatalf("failure checking for existence of variable '%s' in workspace '%s', %s\n", key, ws, err)
-	} else if v != nil {
-		errLog.Fatalf("'%s' already exists in '%s'. Use 'variable update' command to change the value.\n", key, ws)
-	}
+	for _, w := range ws {
+		for _, v := range w.Variables {
+			if v.Key == key {
+				err := fmt.Errorf("'%s' already exists in '%s'. Use 'variable update' command to change the value", key, w.Name)
+				cobra.CheckErr(err)
+			}
+		}
 
-	fmt.Printf("Workspace %s: Adding variable %s = %s\n", ws, key, value)
-	if !readOnlyMode {
-		if _, err := lib.AddOrUpdateVariable(lib.UpdateConfig{
-			Organization:          organization,
-			Workspace:             ws,
-			SearchString:          key,
-			NewValue:              value,
-			AddKeyIfNotFound:      true,
-			SearchOnVariableValue: false,
-			SensitiveVariable:     false,
-		}); err != nil {
-			errLog.Fatalf("failed to add variable '%s' in workspace '%s', %s\n", key, ws, err)
+		fmt.Printf("Workspace %s: Adding variable %s = %s\n", w.Name, key, value)
+		if !readOnlyMode {
+			_, err := client.Variables.Create(ctx, w.ID, tfe.VariableCreateOptions{
+				Key:   &key,
+				Value: &value,
+			})
+			cobra.CheckErr(err)
 		}
 	}
 }

@@ -1,4 +1,4 @@
-// Copyright © 2018-2022 SIL International
+// Copyright © 2018-2024 SIL International
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -18,8 +18,6 @@ import (
 	"fmt"
 
 	"github.com/spf13/cobra"
-
-	"github.com/silinternational/tfc-ops/v3/lib"
 )
 
 var key string
@@ -29,54 +27,36 @@ var variablesDeleteCmd = &cobra.Command{
 	Short: "Delete variable",
 	Long:  `Delete variable in matching workspace having the specified key`,
 	Args:  cobra.ExactArgs(0),
-	Run: func(cmd *cobra.Command, args []string) {
-		runVariablesDelete()
-	},
+	Run:   runVariablesDelete,
 }
 
 func init() {
 	variablesCmd.AddCommand(variablesDeleteCmd)
 	variablesDeleteCmd.Flags().StringVarP(&key, "key", "k", "",
 		requiredPrefix+"Terraform variable key to delete, must match exactly")
-	if err := variablesDeleteCmd.MarkFlagRequired("key"); err != nil {
-		errLog.Fatalln("failed to mark 'key' as a required flag on variablesDeleteCmd: " + err.Error())
-	}
+	cobra.CheckErr(variablesDeleteCmd.MarkFlagRequired("key"))
 }
 
-func runVariablesDelete() {
-	if readOnlyMode {
-		fmt.Println("Read only mode enabled. No variables will be deleted.")
-	}
-
+func runVariablesDelete(cmd *cobra.Command, args []string) {
 	if workspace == "" {
-		errLog.Fatal("No workspace specified")
+		cobra.CheckErr("no workspace specified")
 	}
 
-	found := deleteWorkspaceVar(organization, workspace, key)
-	if !found {
-		errLog.Fatalf("Variable %s not found in workspace %s\n", key, workspace)
-	}
-}
+	w, err := client.Workspaces.Read(ctx, organization, workspace)
+	cobra.CheckErr(err)
 
-func deleteWorkspaceVar(org, ws, key string) bool {
-	workspace, err := lib.GetWorkspaceByName(org, ws)
-	if err != nil {
-		println(err.Error())
-		return false
-	}
-
-	for _, v := range workspace.Variables {
+	for _, v := range w.Variables {
 		if v.Key == key {
-			fmt.Printf("Deleting variable %s from workspace %s\n", v.Key, ws)
+			fmt.Printf("Deleting variable %s from workspace %s\n", v.Key, workspace)
 
 			if !readOnlyMode {
-				if err := lib.DeleteVariable(workspace.ID, v.ID); err != nil {
-					println(err.Error())
-				}
+				err := client.Variables.Delete(ctx, w.ID, v.ID)
+				cobra.CheckErr(err)
 			}
-
-			return err == nil
+			return
 		}
 	}
-	return false
+
+	err = fmt.Errorf("variable %s not found in workspace %s", key, workspace)
+	cobra.CheckErr(err)
 }

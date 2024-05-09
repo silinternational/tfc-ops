@@ -1,4 +1,4 @@
-// Copyright © 2018-2022 SIL International
+// Copyright © 2018-2024 SIL International
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -16,14 +16,13 @@ package cmd
 
 import (
 	"fmt"
+	"reflect"
 	"strings"
 
 	"github.com/spf13/cobra"
-
-	"github.com/silinternational/tfc-ops/v3/lib"
 )
 
-var attributes string
+var attributes []string
 
 // listCmd represents the list command
 var listCmd = &cobra.Command{
@@ -31,30 +30,29 @@ var listCmd = &cobra.Command{
 	Short: "List Workspaces",
 	Long:  `Lists the TF workspaces with (some of) their attributes`,
 	Args:  cobra.ExactArgs(0),
-	Run: func(cmd *cobra.Command, args []string) {
-		fmt.Println("Getting list of workspaces ...")
-		runList()
-	},
+	Run:   runWorkspacesList,
 }
 
 func init() {
 	workspaceCmd.AddCommand(listCmd)
-	const flagAttributes = "attributes"
-	listCmd.Flags().StringVarP(&attributes, flagAttributes, "a", "",
+	listCmd.Flags().StringSliceVarP(&attributes, "attributes", "a", nil,
 		requiredPrefix+"Workspace attributes to list, use Terraform Cloud API workspace attribute names")
-	_ = listCmd.MarkFlagRequired(flagAttributes)
+
+	cobra.CheckErr(listCmd.MarkFlagRequired("attributes"))
 }
 
-func runList() {
-	allAttrs := strings.Split(attributes, ",")
-	allData, err := lib.GetWorkspaceAttributes(organization, allAttrs)
-	if err != nil {
-		fmt.Println(err.Error())
-		return
-	}
+func runWorkspacesList(cmd *cobra.Command, args []string) {
+	fmt.Println("Getting list of workspaces ...")
+	list, err := client.Workspaces.List(ctx, organization, nil)
+	cobra.CheckErr(err)
 
-	fmt.Println(strings.Join(allAttrs, ", "))
-	for _, ws := range allData {
-		fmt.Println(strings.Join(ws, ", "))
+	fmt.Println(strings.Join(attributes, ", "))
+	for _, w := range list.Items {
+		r := reflect.ValueOf(w)
+		data := make([]string, len(attributes))
+		for i, a := range attributes {
+			data[i] = reflect.Indirect(r).FieldByName(a).String()
+		}
+		fmt.Println(strings.Join(data, ", "))
 	}
 }

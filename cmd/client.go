@@ -1,4 +1,4 @@
-// Copyright © 2018-2022 SIL International
+// Copyright © 2018-2024 SIL International
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -12,19 +12,27 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package lib
+package cmd
 
-func getVCSToken(vcsUsername, orgName string) (string, error) {
-	list, err := client.OAuthTokens.List(ctx, orgName, nil)
-	if err != nil {
-		return "", err
+import (
+	"context"
+
+	"github.com/hashicorp/go-tfe"
+)
+
+var (
+	client *tfe.Client
+	ctx    = context.Background()
+)
+
+func NewClient(t string) error {
+	cfg := tfe.DefaultConfig()
+	if t == "" {
+		t = token
 	}
+	cfg.Token = t
 
-	for _, token := range list.Items {
-		if token.ServiceProviderUser == vcsUsername {
-			return token.ID, nil
-		}
-	}
-
-	return "", nil
+	var err error
+	client, err = tfe.NewClient(cfg)
+	return err
 }

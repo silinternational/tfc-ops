@@ -1,4 +1,4 @@
-// Copyright © 2018-2022 SIL International
+// Copyright © 2018-2024 SIL International
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -22,14 +22,13 @@ import (
 
 	"github.com/hashicorp/go-tfe"
 	"github.com/spf13/cobra"
-
-	api "github.com/silinternational/tfc-ops/v3/lib"
 )
 
 var (
 	keyContains   string
 	valueContains string
 	tabularCSV    bool
+	sensitive     = map[bool]string{true: "(sensitive)"}
 )
 
 var variablesListCmd = &cobra.Command{
@@ -37,40 +36,7 @@ var variablesListCmd = &cobra.Command{
 	Short: "Report on variables",
 	Long:  `Show the values of variables with a key or value containing a certain string`,
 	Args:  cobra.ExactArgs(0),
-	Run: func(cmd *cobra.Command, args []string) {
-		if len(keyContains) == 0 && len(valueContains) == 0 {
-			fmt.Println("Error: Either the 'key_contains' flag or 'value_contains flag must be set")
-			fmt.Println("")
-			os.Exit(1)
-		}
-
-		if tabularCSV {
-			fmt.Println("workspace,key,value")
-		} else {
-			keyMsg := ""
-			valMsg := ""
-
-			if keyContains != "" {
-				keyMsg = " key containing " + keyContains
-			}
-
-			if valueContains != "" {
-				valMsg = " value containing " + valueContains
-				if keyContains != "" {
-					valMsg = " or value containing " + valueContains
-				}
-			}
-
-			wsMsg := workspace
-			if wsMsg == "" {
-				wsMsg = "all workspaces"
-			}
-			if !tabularCSV {
-				fmt.Printf("Getting variables from %s with%s%s\n", wsMsg, keyMsg, valMsg)
-			}
-		}
-		runVariablesList()
-	},
+	Run:   runVariablesList,
 }
 
 func init() {
@@ -81,66 +47,88 @@ func init() {
 		"required if key_contains is blank - string contained in the Terraform variable values to report on")
 	variablesListCmd.Flags().BoolVar(&tabularCSV, "csv", false,
 		"output variable list in CSV format")
+
+	variablesListCmd.MarkFlagsOneRequired("key_contains", "value_contains")
 }
 
-func runVariablesList() {
-	if workspace != "" {
-		vars, err := api.SearchVariables(organization, workspace, keyContains, valueContains)
-		if err != nil {
-			println(err.Error())
-			return
-		}
-		printWorkspaceVars(workspace, vars)
-		return
-	}
-	wsVars, err := api.SearchVarsInAllWorkspaces(organization, keyContains, valueContains)
-	if err != nil {
-		println(err.Error())
-		return
-	}
-
-	for ws, vs := range wsVars {
-		printWorkspaceVars(ws, vs)
-	}
-	println()
-}
-
-func printWorkspaceVars(ws string, vs []*tfe.Variable) {
-	if len(vs) == 0 {
-		return
-	}
+func runVariablesList(cmd *cobra.Command, args []string) {
 	if tabularCSV {
-		printWorkspaceVarsCSV(ws, vs)
-		return
-	}
-	w := tabwriter.NewWriter(os.Stdout, 0, 0, 1, ' ', tabwriter.Debug)
-	println()
-	fmt.Printf("Workspace: %s has %v matching variable(s)\n", ws, len(vs))
-	fmt.Fprintln(w, "Key \t Value \t Sensitive")
-	for _, v := range vs {
-		sens := ""
-		if v.Sensitive {
-			sens = "(sensitive)"
+		fmt.Println("workspace,key,value")
+	} else {
+		msg := ""
+		ws := workspace
+		if ws == "" {
+			ws = "all workspaces"
 		}
-		fmt.Fprintf(w, "%s \t %s \t %s\n", v.Key, v.Value, sens)
+
+		if keyContains != "" {
+			msg = " key containing " + keyContains
+		}
+
+		if valueContains != "" {
+			if msg != "" {
+				msg += " or"
+			}
+			msg += " value containing " + valueContains
+		}
+
+		fmt.Printf("Getting variables from %s with%s\n", ws, msg)
 	}
-	println()
+
+	var ws []*tfe.Workspace
+	if workspace != "" {
+		w, err := client.Workspaces.Read(ctx, organization, workspace)
+		cobra.CheckErr(err)
+
+		ws = append(ws, w)
+	} else {
+		var err error
+		list, err := client.Workspaces.List(ctx, organization, nil)
+		cobra.CheckErr(err)
+
+		ws = list.Items
+	}
+
+	for _, w := range ws {
+		var vars []*tfe.Variable
+		for _, v := range w.Variables {
+			if (keyContains != "" && strings.Contains(v.Key, keyContains)) ||
+				(valueContains != "" && strings.Contains(v.Value, valueContains)) {
+				vars = append(vars, v)
+			}
+		}
+
+		if tabularCSV {
+			printWorkspaceVarsCSV(w.Name, vars)
+		} else {
+			printWorkspaceVars(w.Name, vars)
+		}
+	}
+}
+
+func printWorkspaceVars(workspaceName string, vars []*tfe.Variable) {
+	fmt.Printf("\nWorkspace %s has %v matching variable(s)\n", workspaceName, len(vars))
+	w := tabwriter.NewWriter(os.Stdout, 0, 0, 1, ' ', tabwriter.Debug)
+	fmt.Fprintln(w, "Key \t Value \t Sensitive")
+	for _, v := range vars {
+		fmt.Fprintf(w, "%s \t %s \t %s\n", v.Key, v.Value, sensitive[v.Sensitive])
+	}
 	w.Flush()
+	fmt.Println()
 }
 
 func printWorkspaceVarsCSV(ws string, vs []*tfe.Variable) {
 	for _, v := range vs {
-		val := v.Value
 		if v.Sensitive {
-			val = "(sensitive)"
+			v.Value = sensitive[v.Sensitive]
 		}
-		fmt.Printf(`"%s","%s","%s"`+"\n", escapeString(ws), escapeString(v.Key), escapeString(val))
+		fmt.Printf(`"%s","%s","%s"`+"\n", escapeString(ws), escapeString(v.Key), escapeString(v.Value))
 	}
 }
 
 // escapeString escapes characters for CSV encoding, adding a backslash before a double-quote, and converting
 // a newline to `\n`
 func escapeString(s string) string {
-	tmp := strings.Replace(s, `"`, `\"`, -1)
-	return strings.Replace(tmp, "\n", `\n`, -1)
+	tmp := strings.ReplaceAll(s, `"`, `\"`)
+	return strings.ReplaceAll(tmp, "\n", `\n`)
 }

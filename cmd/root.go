@@ -1,4 +1,4 @@
-// Copyright © 2018-2022 SIL International
+// Copyright © 2018-2024 SIL International
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -16,22 +16,23 @@ package cmd
 
 import (
 	"fmt"
-	"log"
 	"os"
 
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
-
-	"github.com/silinternational/tfc-ops/v3/lib"
 )
 
-const requiredPrefix = "required - "
+const (
+	requiredPrefix = "required - "
+	atlasToken     = "ATLAS_TOKEN"
+)
 
 var (
 	cfgFile      string
+	token        string
 	organization string
 	readOnlyMode bool
-	errLog       *log.Logger
+	debug        bool
 )
 
 // rootCmd represents the base command when called without any subcommands
@@ -53,30 +54,28 @@ func Execute() {
 
 func init() {
 	cobra.OnInitialize(initConfig)
-
-	errLog = log.New(os.Stderr, "", 0)
 }
 
 func initRoot(cmd *cobra.Command, args []string) {
-	// Get Tokens from env vars
-	atlasToken := os.Getenv("ATLAS_TOKEN")
-	if atlasToken == "" {
-		errLog.Fatalln("Error: Environment variable for ATLAS_TOKEN is required to execute plan and migration")
+	// Skip for version command
+	if cmd.UseLine() == versionCmd.UseLine() {
+		return
 	}
-	lib.SetToken(atlasToken)
 
-	debugStr := os.Getenv("TFC_OPS_DEBUG")
-	if debugStr == "TRUE" || debugStr == "true" {
-		lib.EnableDebug()
+	// Get Tokens from env vars
+	token = viper.GetString(atlasToken)
+	if token == "" {
+		err := fmt.Errorf("environment variable for %s is required to execute plan and migration", atlasToken)
+		cobra.CheckErr(err)
 	}
+
+	debug = viper.GetBool("TFC_OPS_DEBUG")
 
 	if readOnlyMode {
-		lib.EnableReadOnlyMode()
+		fmt.Println("###### READ ONLY MODE ENABLED ######")
 	}
 
-	if err := lib.NewClient(""); err != nil {
-		errLog.Fatalln(err)
-	}
+	cobra.CheckErr(NewClient(""))
 }
 
 // initConfig reads in config file and ENV variables if set.
@@ -95,6 +94,7 @@ func initConfig() {
 	}
 
 	viper.AutomaticEnv() // read in environment variables that match
+	viper.SetDefault("TFC_OPS_DEBUG", false)
 
 	// If a config file is found, read it in.
 	if err := viper.ReadInConfig(); err == nil {

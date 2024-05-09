@@ -1,6 +1,6 @@
-module github.com/silinternational/tfc-ops/v3
+module github.com/silinternational/tfc-ops/v4
 
-go 1.19
+go 1.22
 
 require (
 	github.com/hashicorp/go-tfe v1.53.0
@@ -14,7 +14,7 @@ require (
 	github.com/fsnotify/fsnotify v1.7.0 // indirect
 	github.com/google/go-querystring v1.1.0 // indirect
 	github.com/hashicorp/go-cleanhttp v0.5.2 // indirect
-	github.com/hashicorp/go-retryablehttp v0.7.5 // indirect
+	github.com/hashicorp/go-retryablehttp v0.7.6 // indirect
 	github.com/hashicorp/go-slug v0.15.0 // indirect
 	github.com/hashicorp/go-version v1.6.0 // indirect
 	github.com/hashicorp/hcl v1.0.0 // indirect

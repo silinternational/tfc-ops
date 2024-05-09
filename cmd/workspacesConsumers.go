@@ -1,4 +1,4 @@
-// Copyright © 2023 SIL International
+// Copyright © 2018-2024 SIL International
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -15,68 +15,17 @@
 package cmd
 
 import (
-	"fmt"
-	"log"
-	"strings"
-
 	"github.com/spf13/cobra"
-
-	"github.com/silinternational/tfc-ops/v3/lib"
 )
 
-const (
-	flagConsumers = "consumers"
-	flagWorkspace = "workspace"
-)
-
-func addConsumersCommand(parentCommand *cobra.Command) {
-	var consumers string
-	workspaceConsumersCmd := &cobra.Command{
-		Use:   flagConsumers,
-		Short: "Manage workspace remote state consumers",
-		Long:  `Add to workspace remote state consumers. (Possible future capability: list, replace, delete)`,
-		Args:  cobra.ExactArgs(0),
-		Run: func(cmd *cobra.Command, args []string) {
-			runWorkspaceConsumers(consumers)
-		},
-	}
-
-	parentCommand.AddCommand(workspaceConsumersCmd)
-
-	workspaceConsumersCmd.Flags().StringVarP(&workspace, flagWorkspace, "w", "",
-		requiredPrefix+"Partial workspace name to search across all workspaces")
-
-	workspaceConsumersCmd.Flags().StringVar(&consumers, flagConsumers, "",
-		requiredPrefix+"List of remote state consumer workspaces, comma-separated")
-
-	requiredFlags := []string{flagConsumers, flagWorkspace}
-	for _, flag := range requiredFlags {
-		if err := workspaceConsumersCmd.MarkFlagRequired(flag); err != nil {
-			panic("MarkFlagRequired failed with error: " + err.Error())
-		}
-	}
+// workspaceConsumersCmd represents the top level command for workspace consumers
+var workspaceConsumersCmd = &cobra.Command{
+	Use:   "consumers",
+	Short: "Manage workspace remote state consumers",
+	Long:  `Add, list, update, or delete workspace remote state consumers`,
+	Args:  cobra.MinimumNArgs(1),
 }
 
-func runWorkspaceConsumers(consumers string) {
-	workspaceData, err := lib.GetWorkspaceByName(organization, workspace)
-	if err != nil {
-		log.Fatalln("workspace consumers", err)
-	}
-
-	consumersList := strings.Split(consumers, ",")
-	consumerIDs := make([]string, len(consumersList))
-	for i, consumer := range consumersList {
-		consumerData, err := lib.GetWorkspaceByName(organization, consumer)
-		if err != nil {
-			log.Fatalln("workspace consumers", err)
-		}
-		consumerIDs[i] = consumerData.ID
-	}
-
-	fmt.Printf("Adding to %s: %s", workspace, consumers)
-	if !readOnlyMode {
-		if err := lib.AddRemoteStateConsumers(workspaceData.ID, consumerIDs); err != nil {
-			log.Fatalln("workspace consumers", err)
-		}
-	}
+func init() {
+	workspaceCmd.AddCommand(workspaceConsumersCmd)
 }

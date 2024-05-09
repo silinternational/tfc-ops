@@ -1,4 +1,4 @@
-// Copyright © 2018-2022 SIL International
+// Copyright © 2018-2024 SIL International
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -15,6 +15,9 @@
 package cmd
 
 import (
+	"strings"
+
+	"github.com/hashicorp/go-tfe"
 	"github.com/spf13/cobra"
 )
 
@@ -29,5 +32,24 @@ var workspaceCmd = &cobra.Command{
 func init() {
 	rootCmd.AddCommand(workspaceCmd)
 	addGlobalFlags(workspaceCmd)
-	addConsumersCommand(workspaceCmd)
+}
+
+func workspaceListToString(workspaces []*tfe.Workspace) string {
+	if len(workspaces) == 0 {
+		return ""
+	}
+
+	names := make([]string, len(workspaces))
+	for i, w := range workspaces {
+		names[i] = w.Name
+	}
+
+	s := ""
+	if len(workspaces) > 1 {
+		s = "workspaces: " + strings.Join(names, ", ")
+	} else {
+		s = "workspace '" + names[0] + "'"
+	}
+
+	return s
 }

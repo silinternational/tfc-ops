@@ -2,15 +2,14 @@ package lib
 
 import (
 	"fmt"
-	"io/ioutil"
+	"io"
 	"net/http"
-	"os"
 	"strings"
 )
 
 // callAPI creates a http.Request object, attaches headers to it and makes the
 // requested api call.
-func callAPI(method, url, postData string, headers map[string]string) *http.Response {
+func callAPI(method, url, postData string, headers map[string]string) (*http.Response, error) {
 	var err error
 	var req *http.Request
 
@@ -21,8 +20,7 @@ func callAPI(method, url, postData string, headers map[string]string) *http.Resp
 	}
 
 	if err != nil {
-		fmt.Println(err.Error())
-		os.Exit(1)
+		return nil, err
 	}
 
 	req.Header.Set("Authorization", "Bearer "+config.token)
@@ -36,15 +34,13 @@ func callAPI(method, url, postData string, headers map[string]string) *http.Resp
 
 	resp, err := client.Do(req)
 	if err != nil {
-		fmt.Println(err.Error())
-		os.Exit(1)
+		return nil, err
 	} else if resp.StatusCode >= 300 {
-		bodyBytes, _ := ioutil.ReadAll(resp.Body)
-		fmt.Println(fmt.Sprintf(
+		bodyBytes, _ := io.ReadAll(resp.Body)
+		return nil, fmt.Errorf(
 			"API returned an error.\n\tMethod: %s\n\tURL: %s\n\tCode: %v\n\tStatus: %s\n\tRequest Body: %s\n\tResponse Body: %s",
-			method, url, resp.StatusCode, resp.Status, postData, bodyBytes))
-		os.Exit(1)
+			method, url, resp.StatusCode, resp.Status, postData, bodyBytes)
 	}
 
-	return resp
+	return resp, nil
 }

@@ -108,20 +108,15 @@ func getToken() {
 }
 
 func readTerraformCredentials() (*Credentials, error) {
-	var configDir string
-
+	userConfigDir := os.UserHomeDir
 	if runtime.GOOS == "windows" {
-		var err error
-		configDir, err = os.UserConfigDir()
-		if err != nil {
-			return nil, fmt.Errorf("unable to get the config directory: %v", err)
-		}
-	} else {
-		var err error
-		configDir, err = os.UserHomeDir()
-		if err != nil {
-			return nil, fmt.Errorf("unable to get the home directory: %v", err)
-		}
+		userConfigDir = os.UserConfigDir
+	}
+
+	var err error
+	configDir, err := userConfigDir()
+	if err != nil {
+		return nil, fmt.Errorf("unable to get the home directory: %v", err)
 	}
 
 	credentialsPath := filepath.Join(configDir, ".terraform.d", "ceredentials.tfrc.json")

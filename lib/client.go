@@ -48,7 +48,6 @@ type CloneConfig struct {
 	SourceWorkspace             string
 	NewWorkspace                string
 	NewVCSTokenID               string
-	AtlasToken                  string
 	AtlasTokenDestination       string
 	CopyState                   bool
 	CopyVariables               bool
@@ -671,13 +670,11 @@ func CreateWorkspace2(oc OpsConfig, vcsTokenID string) (Workspace, error) {
 //
 // NOTE: This procedure can be used to copy/migrate a workspace's state to a new one.
 // (see the -backend-config mention below and the backend.tf file in this repo)
-func RunTFInit(oc OpsConfig, tfToken, tfTokenDestination string) error {
+func RunTFInit(oc OpsConfig, tfTokenDestination string) error {
 	var tfInit string
 	var err error
 	var osCmd *exec.Cmd
 	var stderr bytes.Buffer
-
-	tokenEnv := "ATLAS_TOKEN"
 
 	stateFile := ".terraform"
 
@@ -688,10 +685,6 @@ func RunTFInit(oc OpsConfig, tfToken, tfTokenDestination string) error {
 		if err != nil {
 			return err
 		}
-	}
-
-	if err := os.Setenv(tokenEnv, tfToken); err != nil {
-		return fmt.Errorf("Error setting %s environment variable to source value: %s", tokenEnv, err)
 	}
 
 	tfInit = fmt.Sprintf(`-backend-config=name=%s/%s`, oc.SourceOrg, oc.SourceName)
@@ -706,9 +699,7 @@ func RunTFInit(oc OpsConfig, tfToken, tfTokenDestination string) error {
 		return err
 	}
 
-	if err := os.Setenv(tokenEnv, tfTokenDestination); err != nil {
-		return fmt.Errorf("Error setting %s environment variable to destination value: %s", tokenEnv, err)
-	}
+	SetToken(tfTokenDestination)
 
 	// Run tf init with new version
 	tfInit = fmt.Sprintf(`-backend-config=name=%s/%s`, oc.NewOrg, oc.NewName)
@@ -736,10 +727,6 @@ func RunTFInit(oc OpsConfig, tfToken, tfTokenDestination string) error {
 		println("Error waiting for new tf init: " + tfInit)
 		fmt.Println(fmt.Sprint(err) + ": " + stderr.String())
 		return err
-	}
-
-	if err := os.Setenv(tokenEnv, tfToken); err != nil {
-		return fmt.Errorf("Error resetting %s environment variable back to source value: %s", tokenEnv, err)
 	}
 
 	return nil
@@ -809,15 +796,18 @@ func CloneWorkspace(cfg CloneConfig) ([]string, error) {
 	}
 
 	if cfg.DifferentDestinationAccount {
-		config.token = cfg.AtlasTokenDestination
+		// save primary token and set destination token to create the workspace and variables
+		primaryToken := config.token
+		SetToken(cfg.AtlasTokenDestination)
 		_, err := CreateWorkspace(oc, cfg.NewVCSTokenID)
 		if err != nil {
 			return nil, err
 		}
 		CreateAllVariables(oc.NewOrg, oc.NewName, tfVars)
+		SetToken(primaryToken)
 
 		if cfg.CopyState {
-			if err := RunTFInit(oc, cfg.AtlasToken, cfg.AtlasTokenDestination); err != nil {
+			if err := RunTFInit(oc, cfg.AtlasTokenDestination); err != nil {
 				return sensitiveVars, err
 			}
 		}

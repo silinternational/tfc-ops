@@ -141,8 +141,8 @@ func runClone(cfg cloner.CloneConfig) {
 
 	cfg.AtlasTokenDestination = os.Getenv("ATLAS_TOKEN_DESTINATION")
 	if cfg.AtlasTokenDestination == "" {
-		cfg.AtlasTokenDestination = os.Getenv("ATLAS_TOKEN")
-		fmt.Print("Info: ATLAS_TOKEN_DESTINATION is not set, using ATLAS_TOKEN for destination account.\n\n")
+		cfg.AtlasTokenDestination = cloner.GetToken()
+		fmt.Print("Info: ATLAS_TOKEN_DESTINATION is not set, using primary credential for destination account.\n\n")
 	}
 
 	fmt.Printf("clone called using %s, %s, %s, copyState: %t, copyVariables: %t, "+

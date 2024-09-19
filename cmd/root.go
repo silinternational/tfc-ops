@@ -15,9 +15,13 @@
 package cmd
 
 import (
+	"encoding/json"
+	"errors"
 	"fmt"
 	"log"
 	"os"
+	"path/filepath"
+	"runtime"
 	"strings"
 
 	"github.com/spf13/cobra"
@@ -59,12 +63,7 @@ func init() {
 }
 
 func initRoot(cmd *cobra.Command, args []string) {
-	// Get Tokens from env vars
-	atlasToken := os.Getenv("ATLAS_TOKEN")
-	if atlasToken == "" {
-		errLog.Fatalln("Error: Environment variable for ATLAS_TOKEN is required to execute plan and migration")
-	}
-	lib.SetToken(atlasToken)
+	getToken()
 
 	debugStr := os.Getenv("TFC_OPS_DEBUG")
 	if debugStr == "TRUE" || debugStr == "true" {
@@ -74,6 +73,72 @@ func initRoot(cmd *cobra.Command, args []string) {
 	if readOnlyMode {
 		lib.EnableReadOnlyMode()
 	}
+}
+
+type Credentials struct {
+	Credentials struct {
+		AppTerraformIo struct {
+			Token string `json:"token"`
+		} `json:"app.terraform.io"`
+	} `json:"credentials"`
+}
+
+func getToken() {
+	credentials, err := readTerraformCredentials()
+	if err != nil {
+		errLog.Fatalln("failed to get Terraform credentials:", err)
+	}
+
+	if credentials != nil {
+		token := credentials.Credentials.AppTerraformIo.Token
+		if token != "" {
+			lib.SetToken(token)
+			return
+		}
+	}
+
+	// fall back to using ATLAS_TOKEN environment variable
+	atlasToken := os.Getenv("ATLAS_TOKEN")
+	if atlasToken != "" {
+		lib.SetToken(atlasToken)
+		return
+	}
+
+	errLog.Fatalln("no credentials found, use 'terraform login' to create a token")
+}
+
+func readTerraformCredentials() (*Credentials, error) {
+	userConfigDir := os.UserHomeDir
+	if runtime.GOOS == "windows" {
+		userConfigDir = os.UserConfigDir
+	}
+
+	var err error
+	configDir, err := userConfigDir()
+	if err != nil {
+		return nil, fmt.Errorf("unable to get the home directory: %v", err)
+	}
+
+	credentialsPath := filepath.Join(configDir, ".terraform.d", "credentials.tfrc.json")
+	fmt.Println(credentialsPath)
+	if _, err := os.Stat(credentialsPath); errors.Is(err, os.ErrNotExist) {
+		return nil, nil
+	} else if err != nil {
+		return nil, fmt.Errorf("error checking file existence: %v", err)
+	}
+
+	fileContents, err := os.ReadFile(credentialsPath)
+	if err != nil {
+		return nil, fmt.Errorf("unable to read credentials file: %v", err)
+	}
+
+	var creds Credentials
+	err = json.Unmarshal(fileContents, &creds)
+	if err != nil {
+		return nil, fmt.Errorf("unable to parse JSON: %v", err)
+	}
+
+	return &creds, nil
 }
 
 // initConfig reads in config file and ENV variables if set.

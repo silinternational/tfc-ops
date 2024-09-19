@@ -119,7 +119,7 @@ func readTerraformCredentials() (*Credentials, error) {
 		return nil, fmt.Errorf("unable to get the home directory: %v", err)
 	}
 
-	credentialsPath := filepath.Join(configDir, ".terraform.d", "ceredentials.tfrc.json")
+	credentialsPath := filepath.Join(configDir, ".terraform.d", "credentials.tfrc.json")
 	fmt.Println(credentialsPath)
 	if _, err := os.Stat(credentialsPath); errors.Is(err, os.ErrNotExist) {
 		return nil, nil

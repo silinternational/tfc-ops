@@ -8,7 +8,7 @@ import (
 	"github.com/manifoldco/promptui"
 	"github.com/spf13/cobra"
 
-	"github.com/silinternational/tfc-ops/v3/lib"
+	"github.com/silinternational/tfc-ops/v4/lib"
 )
 
 var (

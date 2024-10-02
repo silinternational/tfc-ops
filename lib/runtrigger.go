@@ -17,8 +17,8 @@ type RunTriggerConfig struct {
 func CreateRunTrigger(config RunTriggerConfig) error {
 	u := NewTfcUrl("/workspaces/" + config.WorkspaceID + "/run-triggers")
 	payload := buildRunTriggerPayload(config.SourceWorkspaceID)
-	_ = callAPI(http.MethodPost, u.String(), payload, nil)
-	return nil
+	_, err := callAPI(http.MethodPost, u.String(), payload, nil)
+	return err
 }
 
 func buildRunTriggerPayload(sourceWorkspaceID string) string {
@@ -81,12 +81,13 @@ func ListRunTriggers(config ListRunTriggerConfig) ([]RunTrigger, error) {
 	u := NewTfcUrl("/workspaces/" + config.WorkspaceID + "/run-triggers")
 	u.SetParam(paramFilterRunTriggerType, config.Type)
 
-	resp := callAPI(http.MethodGet, u.String(), "", nil)
-	triggers, err := parseRunTriggerListResponse(resp.Body)
+	resp, err := callAPI(http.MethodGet, u.String(), "", nil)
 	if err != nil {
 		return nil, err
 	}
-	return triggers, nil
+	defer resp.Body.Close()
+
+	return parseRunTriggerListResponse(resp.Body)
 }
 
 func parseRunTriggerListResponse(r io.Reader) ([]RunTrigger, error) {

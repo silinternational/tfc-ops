@@ -79,16 +79,6 @@ func init() {
 		`optional (e.g. "-v=true") whether to do the search based on the value of the variables. (Must be false if add-key-if-not-found is true`,
 	)
 	updateCmd.Flags().BoolVarP(
-		&readOnlyMode,
-		"dry-run-mode",
-		"d",
-		false,
-		`optional (e.g. "-d=true") dry run mode only.`,
-	)
-	if err := updateCmd.Flags().MarkDeprecated("dry-run-mode", "use -r for read-only-mode"); err != nil {
-		errLog.Fatalln(err)
-	}
-	updateCmd.Flags().BoolVarP(
 		&sensitiveVariable,
 		"sensitive-variable",
 		"x",

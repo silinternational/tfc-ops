@@ -1,22 +1,28 @@
 # Terraform Cloud Ops Tool
+
 This application can be helpful in making copies/clones of a workspace and bringing its variables over
 to the new one. It can also be used for listing or updating workspace attributes and listing or
 modifying variables in workspaces.
 
-## Required ENV vars
-- `ATLAS_TOKEN` - Must be set as an environment variable. Get this by going to 
-https://app.terraform.io/app/settings/tokens and generating a new token.
-- `ATLAS_TOKEN_DESTINATION` - Only necessary if cloning to a new organization in TF Cloud.
-
-## Optional ENV vars
-- `TFC_OPS_DEBUG` - Set to `true` to enable debug output
-
 ## Installation
+
 There are three ways to download/install this script:
 
 1. Download a pre-built binary for your operating system from the [Releases](https://github.com/silinternational/tfc-ops/releases) page.
 2. If you're a Go developer you can install it by running `go get -u https://github.com/silinternational/tfc-ops.git`
 3. If you're a Go developer and want to modify the source before running, clone this repo and run with `go run main.go ...`
+
+## Configuration
+
+To provide access to HCP Terraform (Terraform Cloud) run the `terraform login` command and follow the prompts. This
+will store a short-lived token on your computer. tfc-ops uses this token to make API calls to HCP Terraform.
+
+## Environment vars
+- `TFC_OPS_DEBUG` - Set to `true` to enable debug output
+- `ATLAS_TOKEN` - An HCP Terraform token can be set as an environment variable. Get this by going to
+  https://app.terraform.io/app/settings/tokens and generating a new token. The recommended alternative is to use
+  the `terraform login` command to request a short-lived token.
+- `ATLAS_TOKEN_DESTINATION` - Only necessary if cloning to a new organization in TF Cloud.
 
 ## Cloning a TF Cloud Workspace
 Examples.
@@ -176,7 +182,6 @@ Usage:
 
 Flags:
   -a, --attribute string   required - Workspace attribute to update, use Terraform Cloud API workspace attribute names
-  -d, --dry-run-mode       dry run mode only. (e.g. "-d")
   -h, --help               help for update
   -v, --value string       required - Value
   -w, --workspace string   required - Partial workspace name to search across all workspaces

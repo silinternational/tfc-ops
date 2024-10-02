@@ -19,3 +19,7 @@ func EnableReadOnlyMode() {
 func SetToken(t string) {
 	config.token = t
 }
+
+func GetToken() string {
+	return config.token
+}

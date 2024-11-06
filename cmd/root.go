@@ -36,6 +36,7 @@ var (
 	cfgFile      string
 	organization string
 	readOnlyMode bool
+	debugMode    bool
 	errLog       *log.Logger
 )
 
@@ -63,16 +64,17 @@ func init() {
 }
 
 func initRoot(cmd *cobra.Command, args []string) {
-	getToken()
-
 	debugStr := os.Getenv("TFC_OPS_DEBUG")
 	if debugStr == "TRUE" || debugStr == "true" {
 		lib.EnableDebug()
+		debugMode = true
 	}
 
 	if readOnlyMode {
 		lib.EnableReadOnlyMode()
 	}
+
+	getToken()
 }
 
 type Credentials struct {
@@ -120,7 +122,10 @@ func readTerraformCredentials() (*Credentials, error) {
 	}
 
 	credentialsPath := filepath.Join(configDir, ".terraform.d", "credentials.tfrc.json")
-	fmt.Println(credentialsPath)
+	if debugMode {
+		fmt.Println("reading credentials from:", credentialsPath)
+	}
+
 	if _, err := os.Stat(credentialsPath); errors.Is(err, os.ErrNotExist) {
 		return nil, nil
 	} else if err != nil {
